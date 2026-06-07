@@ -79,32 +79,31 @@ model = load_model()
 # ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Inter:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap');
 
 :root {
-    --olive:    #71713B;
-    --olive-dk: #57572e;
-    --steel:    #94A5B3;
-    --bone:     #E2DCD0;
-    --cream:    #F5F2EC;
-    --ink:      #1e1e1c;
-    --muted:    #6b6b66;
-    --line:     #dedad3;
-    --white:    #ffffff;
-    --red:      #8c3a25;
-    --red-bg:   #f6eeeb;
-    --red-line: #d4a898;
-    --grn:      #2e5c42;
-    --grn-bg:   #eaf2ed;
-    --grn-line: #96bfaa;
+    --bg:          #F9F9F9;
+    --surface:     #FFFFFF;
+    --surface-alt: #F1F1F0;
+    --text:        #1A1A1A;
+    --text-light:  #6B6B6B;
+    --border:      #E5E5E5;
+    --accent:      #2A5C4A;
+    --accent-gold: #B88B4A;
+    --risk:        #B13E3E;
+    --risk-light:  #F8EAEA;
+    --safe:        #2A5C4A;
+    --safe-light:  #EAF2EF;
+    --shadow-sm:   0 4px 12px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.05);
+    --shadow-md:   0 8px 24px rgba(0,0,0,0.05);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
-    background: var(--cream);
-    color: var(--ink);
+    background: var(--bg);
+    color: var(--text);
     -webkit-font-smoothing: antialiased;
 }
 
@@ -122,73 +121,74 @@ section[data-testid="stSidebar"] { display: none !important; }
 
 /* ── HEADER ── */
 .hdr {
-    padding: 3rem clamp(2.5rem, 9vw, 8rem) 2.6rem;
-    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    padding: 3.5rem clamp(2.5rem, 9vw, 8rem) 3rem;
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 2rem;
 }
 .hdr-eyebrow {
-    font-size: 0.65rem;
-    letter-spacing: 0.22em;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.75rem;
+    color: var(--accent-gold);
+    font-weight: 500;
+    margin-bottom: 0.8rem;
 }
 .hdr-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(2.6rem, 4.2vw, 3.6rem);
-    font-weight: 400;
-    font-style: italic;
-    line-height: 1.08;
-    color: var(--ink);
-    margin-bottom: 0.9rem;
+    font-size: clamp(2.8rem, 4.5vw, 4rem);
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--text);
+    margin-bottom: 1rem;
 }
 .hdr-sub {
-    font-size: 0.83rem;
-    line-height: 1.72;
-    color: var(--muted);
-    font-weight: 300;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: var(--text-light);
+    font-weight: 400;
     max-width: 520px;
 }
 .hdr-stats {
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.5rem;
+    gap: 0.6rem;
     flex-shrink: 0;
 }
-.stat-row { display: flex; align-items: baseline; gap: 0.55rem; }
+.stat-row { display: flex; align-items: baseline; gap: 0.6rem; }
 .stat-n {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.75rem;
-    font-weight: 400;
-    color: var(--olive);
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: var(--accent);
     line-height: 1;
 }
 .stat-l {
-    font-size: 0.65rem;
-    letter-spacing: 0.14em;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--text-light);
+    font-weight: 400;
 }
 
 /* ── PAGE BODY ── */
 .pg {
-    padding: 2.8rem clamp(2.5rem, 9vw, 8rem) 6rem;
+    padding: 3rem clamp(2.5rem, 9vw, 8rem) 5rem;
 }
 
 /* ── SECTION LABEL ── */
 .sl {
-    font-size: 0.63rem;
-    letter-spacing: 0.24em;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--text-light);
     font-weight: 500;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid var(--line);
-    margin-bottom: 1.8rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 2rem;
 }
 
 /* ── WIDGET LABELS ── */
@@ -196,54 +196,54 @@ div[data-testid="stSlider"] > label,
 div[data-testid="stSelectbox"] > label,
 div[data-testid="stRadio"] > label {
     font-family: 'Inter', sans-serif !important;
-    font-size: 0.68rem !important;
+    font-size: 0.7rem !important;
     font-weight: 500 !important;
-    color: var(--muted) !important;
-    letter-spacing: 0.12em !important;
+    color: var(--text-light) !important;
+    letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
 }
 
 /* ── SLIDER track / fill / thumb ── */
 [data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child,
 [data-testid="stSlider"] div[role="progressbar"] {
-    background: var(--line) !important;
+    background: var(--border) !important;
 }
 [data-testid="stSlider"] [data-baseweb="slider"] > div > div:nth-child(2) {
-    background: var(--olive) !important;
+    background: var(--accent) !important;
 }
 [data-testid="stSlider"] [role="slider"] {
-    background: var(--olive) !important;
-    border: 3px solid var(--cream) !important;
-    box-shadow: 0 0 0 2px var(--olive) !important;
-    width: 15px !important;
-    height: 15px !important;
+    background: var(--surface) !important;
+    border: 2px solid var(--accent) !important;
+    box-shadow: none !important;
+    width: 14px !important;
+    height: 14px !important;
     border-radius: 50% !important;
 }
 [data-testid="stSlider"] p {
-    font-size: 0.68rem !important;
-    color: var(--muted) !important;
+    font-size: 0.7rem !important;
+    color: var(--text-light) !important;
     font-family: 'Inter', sans-serif !important;
 }
 
 /* ── SELECTBOX ── */
 [data-baseweb="select"] > div {
-    border-color: var(--line) !important;
-    border-radius: 3px !important;
-    background: var(--white) !important;
+    border-color: var(--border) !important;
+    border-radius: 8px !important;
+    background: var(--surface) !important;
     font-size: 0.85rem !important;
 }
 
 /* ── RADIO ── */
 [data-baseweb="radio"] [data-state="checked"] div,
 [data-baseweb="radio"] div[class*="radioInner"] {
-    background: var(--olive) !important;
+    background: var(--accent) !important;
 }
 [data-baseweb="radio"] label span:first-child {
-    border-color: var(--olive) !important;
+    border-color: var(--accent) !important;
 }
 div[data-testid="stRadio"] [data-baseweb="radio"] label {
-    font-size: 0.84rem !important;
-    color: var(--ink) !important;
+    font-size: 0.85rem !important;
+    color: var(--text) !important;
     text-transform: none !important;
     letter-spacing: 0 !important;
     font-weight: 400 !important;
@@ -251,181 +251,181 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
 
 /* ── BUTTON ── */
 .stButton > button {
-    background: var(--olive) !important;
-    color: var(--white) !important;
+    background: var(--text) !important;
+    color: var(--surface) !important;
     border: none !important;
-    border-radius: 3px !important;
+    border-radius: 40px !important;
     font-family: 'Inter', sans-serif !important;
     font-size: 0.7rem !important;
     font-weight: 500 !important;
-    letter-spacing: 0.16em !important;
+    letter-spacing: 0.1em !important;
     text-transform: uppercase !important;
     padding: 0.8rem 2rem !important;
-    transition: background 0.15s !important;
+    transition: all 0.2s ease !important;
     width: 100% !important;
 }
 .stButton > button:hover {
-    background: var(--olive-dk) !important;
+    background: var(--accent) !important;
 }
 
 /* ── RESULT BOX ── */
 .rbox {
-    border-radius: 4px;
-    padding: 2.2rem 2rem 2rem;
+    border-radius: 20px;
+    padding: 2rem 2rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
 }
-.rbox.risk { background: var(--red-bg);  border: 1px solid var(--red-line); }
-.rbox.safe { background: var(--grn-bg);  border: 1px solid var(--grn-line); }
+.rbox.risk { border-left: 4px solid var(--risk); }
+.rbox.safe { border-left: 4px solid var(--safe); }
 .r-eyebrow {
-    font-size: 0.62rem;
-    letter-spacing: 0.2em;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     font-weight: 500;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
 }
-.rbox.risk .r-eyebrow { color: var(--red); }
-.rbox.safe .r-eyebrow { color: var(--grn); }
+.rbox.risk .r-eyebrow { color: var(--risk); }
+.rbox.safe .r-eyebrow { color: var(--safe); }
 .r-pct {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 4.4rem;
-    font-weight: 300;
+    font-size: 3.6rem;
+    font-weight: 600;
     line-height: 1;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.3rem;
 }
-.rbox.risk .r-pct { color: var(--red); }
-.rbox.safe .r-pct { color: var(--grn); }
+.rbox.risk .r-pct { color: var(--risk); }
+.rbox.safe .r-pct { color: var(--safe); }
 .r-verdict {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.2rem;
-    font-style: italic;
-    font-weight: 400;
-    margin-bottom: 0.55rem;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 0.6rem;
 }
-.rbox.risk .r-verdict { color: var(--red); }
-.rbox.safe .r-verdict { color: var(--grn); }
+.rbox.risk .r-verdict { color: var(--risk); }
+.rbox.safe .r-verdict { color: var(--safe); }
 .r-note {
-    font-size: 0.77rem;
-    color: var(--muted);
-    line-height: 1.65;
-    font-weight: 300;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    line-height: 1.6;
+    font-weight: 400;
 }
 
 /* ── GAUGE ── */
-.gauge { margin-top: 1.6rem; }
+.gauge { margin-top: 2rem; }
 .gauge-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 0.62rem;
-    letter-spacing: 0.1em;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.45rem;
+    color: var(--text-light);
+    margin-bottom: 0.6rem;
 }
 .gauge-track {
-    height: 3px;
-    background: var(--line);
-    border-radius: 2px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
     position: relative;
     overflow: visible;
 }
-.gauge-fill { height: 100%; border-radius: 2px; }
+.gauge-fill { height: 100%; border-radius: 4px; }
 .gauge-dot {
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 9px; height: 9px;
+    width: 12px; height: 12px;
     border-radius: 50%;
-    border: 2px solid var(--white);
-    box-shadow: 0 0 0 1.5px currentColor;
+    border: 2px solid var(--surface);
+    box-shadow: 0 0 0 1px currentColor;
 }
 
 /* ── FACTOR ROWS ── */
 .frow {
     display: grid;
-    grid-template-columns: 150px 1fr 40px;
+    grid-template-columns: 140px 1fr 45px;
     align-items: center;
     gap: 1rem;
-    padding: 0.55rem 0;
-    border-bottom: 1px solid var(--line);
+    padding: 0.65rem 0;
+    border-bottom: 1px solid var(--border);
 }
 .frow:last-child { border-bottom: none; }
 .fn {
-    font-size: 0.76rem;
-    color: var(--muted);
-    font-weight: 400;
+    font-size: 0.75rem;
+    color: var(--text);
+    font-weight: 500;
 }
 .fb-bg {
-    height: 2px;
-    background: var(--line);
-    border-radius: 1px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
     overflow: hidden;
 }
-.fb-fill { height: 100%; border-radius: 1px; }
+.fb-fill { height: 100%; border-radius: 4px; }
 .fp {
     font-size: 0.7rem;
-    color: var(--muted);
+    color: var(--text-light);
     text-align: right;
+    font-weight: 500;
     font-variant-numeric: tabular-nums;
 }
 
 /* ── REC CARD ── */
 .rcard {
-    padding: 1.1rem 1.25rem;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background: var(--white);
-    margin-bottom: 0.7rem;
-    height: calc(100% - 0.7rem);
+    padding: 1.25rem;
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 0.8rem;
+    height: calc(100% - 0.8rem);
 }
-.rcard.alert { border-left: 2px solid var(--red); }
-.rcard.ok    { border-left: 2px solid var(--grn); }
+.rcard.alert { border-top: 3px solid var(--risk); }
+.rcard.ok    { border-top: 3px solid var(--safe); }
 .rc-title {
-    font-size: 0.76rem;
-    font-weight: 500;
-    color: var(--ink);
-    margin-bottom: 0.35rem;
-    letter-spacing: 0.02em;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.01em;
 }
 .rc-desc {
     font-size: 0.75rem;
-    color: var(--muted);
-    line-height: 1.68;
-    font-weight: 300;
+    color: var(--text-light);
+    line-height: 1.65;
+    font-weight: 400;
 }
 
 /* ── ABOUT ── */
 .ablock {
-    padding: 1.5rem 1.6rem;
-    border: 1px solid var(--line);
-    border-radius: 4px;
-    background: var(--white);
+    padding: 1.5rem;
+    border-radius: 16px;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+    height: 100%;
 }
 .ablock h4 {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.05rem;
-    font-style: italic;
-    font-weight: 400;
-    color: var(--ink);
-    padding-bottom: 0.65rem;
-    margin-bottom: 0.85rem;
-    border-bottom: 1px solid var(--line);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
 }
 .ablock p, .ablock li {
-    font-size: 0.78rem;
-    color: var(--muted);
-    line-height: 1.78;
-    font-weight: 300;
+    font-size: 0.8rem;
+    color: var(--text-light);
+    line-height: 1.7;
+    font-weight: 400;
 }
-.ablock ul { padding-left: 1.1rem; }
-.ablock li { margin-bottom: 0.1rem; }
+.ablock ul { padding-left: 1.2rem; }
+.ablock li { margin-bottom: 0.2rem; }
 
 /* ── FOOTER ── */
 .ftr {
-    border-top: 1px solid var(--line);
-    padding: 1.5rem clamp(2.5rem, 9vw, 8rem);
-    font-size: 0.67rem;
-    color: var(--muted);
-    letter-spacing: 0.1em;
+    border-top: 1px solid var(--border);
+    padding: 1.8rem clamp(2.5rem, 9vw, 8rem);
+    font-size: 0.65rem;
+    color: var(--text-light);
+    letter-spacing: 0.08em;
     text-transform: uppercase;
+    background: var(--surface-alt);
 }
 
 /* spacing */
@@ -433,6 +433,7 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
 .s2 { margin-bottom: 1.6rem; }
 .s3 { margin-bottom: 3rem; }
 </style>
+
 """, unsafe_allow_html=True)
 
 # ── HEADER ────────────────────────────────────────────────────────────────────
