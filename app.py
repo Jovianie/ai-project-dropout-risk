@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
@@ -8,341 +9,685 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
-from imblearn.over_sampling import SMOTE
-from imblearn.pipeline import Pipeline as ImbPipeline
 
-# Konfigurasi Halaman
+# ── Page config ────────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="Dropout Risk Analyzer",
-    page_icon="🎓",
+    page_title="Student Dropout Predictor",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-# ---- LOAD DATASET ----
-@st.cache_data
-def load_dataset():
-    # Download dataset dari URL (sumber: Kaggle)
-    url = "https://raw.githubusercontent.com/datasets/student-dropout-prediction/main/student_dropout_dataset_v3.csv"
-    try:
-        df = pd.read_csv(url)
-    except:
-        # Fallback: buat dataset sintetis yang merepresentasikan distribusi asli
-        np.random.seed(42)
-        n = 10000
-        
-        # Generate data dengan distribusi yang mirip notebook
-        df = pd.DataFrame({
-            'Student_ID': np.arange(1, n+1),
-            'Age': np.random.normal(21.03, 2.14, n),
-            'Gender': np.random.choice(['Male', 'Female'], n, p=[0.52, 0.48]),
-            'Family_Income': np.random.normal(38377, 20496, n),
-            'Internet_Access': np.random.choice(['Yes', 'No'], n, p=[0.85, 0.15]),
-            'Study_Hours_per_Day': np.random.normal(4.01, 1.30, n),
-            'Attendance_Rate': np.random.normal(81.74, 8.22, n),
-            'Assignment_Delay_Days': np.random.poisson(1.8, n),
-            'Travel_Time_Minutes': np.random.normal(30.18, 11.92, n),
-            'Part_Time_Job': np.random.choice(['Yes', 'No'], n, p=[0.35, 0.65]),
-            'Scholarship': np.random.choice(['Yes', 'No'], n, p=[0.25, 0.75]),
-            'Stress_Index': np.random.normal(5.51, 1.77, n),
-            'GPA': np.random.normal(2.31, 1.06, n),
-            'Semester_GPA': np.random.normal(2.30, 1.07, n),
-            'CGPA': np.random.normal(2.30, 1.07, n),
-            'Semester': np.random.choice(['Year 1', 'Year 2', 'Year 3', 'Year 4'], n),
-            'Department': np.random.choice(['CS', 'Engineering', 'Business', 'Arts', 'Science'], n),
-            'Parental_Education': np.random.choice(['High School', 'Bachelor', 'Master', 'PhD'], n, p=[0.3, 0.4, 0.2, 0.1]),
-        })
-        
-        # Generate target berdasarkan pola dari notebook
-        dropout_prob = (
-            0.35 * (1 - df['GPA'].clip(0, 4) / 4) +
-            0.25 * (1 - df['Attendance_Rate'] / 100) +
-            0.15 * (df['Assignment_Delay_Days'].clip(0, 15) / 15) +
-            0.15 * (df['Stress_Index'].clip(1, 10) / 10) +
-            0.05 * (df['Part_Time_Job'] == 'Yes').astype(float) +
-            0.03 * (df['Internet_Access'] == 'No').astype(float) +
-            0.02 * (df['Scholarship'] == 'No').astype(float)
-        )
-        dropout_prob = np.clip(dropout_prob + np.random.normal(0, 0.08, n), 0, 1)
-        df['Dropout'] = (dropout_prob > 0.42).astype(int)
-    
-    return df
-
-# ---- TRAIN MODEL ----
+# ── Model: load .pkl if present, otherwise train from synthetic data ────────────
 @st.cache_resource
-def train_model():
-    df = load_dataset()
-    
-    # Preprocessing - SAMA PERSIS DENGAN NOTEBOOK
-    numeric_features = ['Study_Hours_per_Day', 'Attendance_Rate', 'Assignment_Delay_Days',
-                        'Travel_Time_Minutes', 'Stress_Index', 'GPA']
-    categorical_features = ['Internet_Access', 'Part_Time_Job', 'Scholarship', 'Semester']
-    
-    X = df[numeric_features + categorical_features]
-    y = df['Dropout']
-    
-    # Pipeline preprocessing (sama persis dengan notebook)
-    numeric_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', StandardScaler())
-    ])
-    
-    categorical_transformer = Pipeline(steps=[
-        ('imputer', SimpleImputer(strategy='most_frequent')),
-        ('onehot', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
-    ])
-    
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ('num', numeric_transformer, numeric_features),
-            ('cat', categorical_transformer, categorical_features)
-        ],
-        remainder='drop'
-    )
-    
-    # Model dengan SMOTE (sama persis dengan notebook)
-    pipeline = ImbPipeline(steps=[
-        ('preprocessor', preprocessor),
-        ('smote', SMOTE(random_state=42)),
-        ('model', LogisticRegression(max_iter=1000, random_state=42))
-    ])
-    
-    # Train model
-    pipeline.fit(X, y)
-    
-    return pipeline
+def load_model():
+    pkl_path = os.path.join(os.path.dirname(__file__), "logistic_regression_model.pkl")
+    if os.path.exists(pkl_path):
+        import joblib
+        return joblib.load(pkl_path)
 
-# ---- LOAD MODEL ----
-model = train_model()
+    # Fallback: train on synthetic data (used when .pkl is not in repo)
+    np.random.seed(42)
+    n = 2000
+    df = pd.DataFrame({
+        'Internet_Access':       np.random.choice(['Yes', 'No'], n, p=[0.7, 0.3]),
+        'Study_Hours_per_Day':   np.random.uniform(0, 10, n),
+        'Attendance_Rate':       np.random.uniform(40, 100, n),
+        'Assignment_Delay_Days': np.random.uniform(0, 15, n),
+        'Travel_Time_Minutes':   np.random.uniform(5, 120, n),
+        'Part_Time_Job':         np.random.choice(['Yes', 'No'], n, p=[0.4, 0.6]),
+        'Scholarship':           np.random.choice(['Yes', 'No'], n, p=[0.3, 0.7]),
+        'Stress_Index':          np.random.uniform(1, 10, n),
+        'GPA':                   np.random.uniform(1.5, 4.0, n),
+        'Semester':              np.random.choice(['Year 1','Year 2','Year 3','Year 4'], n),
+    })
+    sh = df['Study_Hours_per_Day'].values
+    at = df['Attendance_Rate'].values
+    ad = df['Assignment_Delay_Days'].values
+    si = df['Stress_Index'].values
+    gp = df['GPA'].values
+    pt = (df['Part_Time_Job'] == 'Yes').astype(float).values
+    p  = np.clip(0.30*(1-sh/10)+0.25*(1-at/100)+0.15*(ad/15)+0.15*(si/10)+0.10*(1-gp/4)+0.05*pt
+                 + np.random.normal(0, 0.1, n), 0, 1)
+    df['Dropout'] = (p > 0.45).astype(int)
 
-# ---- KOEFISIEN MODEL (dari notebook) ----
-COEF_DATA = {
-    'GPA': -1.26,
-    'Stress Index': 0.31,
-    'Assignment Delay (Days)': 0.25,
-    'Attendance Rate (%)': -0.24,
-    'Part-Time Job (Yes)': 0.02,
-    'Internet Access (Yes)': -0.14,
-    'Travel Time (minutes)': 0.13,
-    'Semester (Year 1)': -0.12,
-    'Study Hours per Day': -0.03,
-}
+    num_feats = ['Study_Hours_per_Day','Attendance_Rate','Assignment_Delay_Days',
+                 'Travel_Time_Minutes','Stress_Index','GPA']
+    cat_feats = ['Internet_Access','Part_Time_Job','Scholarship','Semester']
 
-# ---- CSS KUSTOM ----
+    X, y = df.drop(columns=['Dropout']), df['Dropout']
+    X_tr, _, y_tr, _ = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+
+    pre = ColumnTransformer([
+        ('num', Pipeline([('i', SimpleImputer(strategy='median')), ('s', StandardScaler())]), num_feats),
+        ('cat', Pipeline([('i', SimpleImputer(strategy='most_frequent')), ('o', OneHotEncoder(handle_unknown='ignore'))]), cat_feats),
+    ], remainder='drop')
+
+    Xp = pre.fit_transform(X_tr)
+    min_idx = np.where(y_tr == 1)[0]
+    maj_idx = np.where(y_tr == 0)[0]
+    over    = np.random.choice(min_idx, size=len(maj_idx)-len(min_idx), replace=True)
+    Xb = np.vstack([Xp, Xp[over]])
+    yb = np.concatenate([y_tr.values, y_tr.values[over]])
+
+    lr = LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced')
+    lr.fit(Xb, yb)
+    return Pipeline([('preprocessor', pre), ('model', lr)])
+
+model = load_model()
+
+# ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-/* Reset & Global */
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; }
-#MainMenu, header, footer, .stDeployButton { display: none !important; }
-.main .block-container { padding-top: 0; padding-bottom: 0; max-width: 1280px; }
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Inter:wght@300;400;500&display=swap');
 
-/* Typography */
-h1 { font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; background: linear-gradient(135deg, #0f172a 0%, #334155 100%); -webkit-background-clip: text; background-clip: text; color: transparent; margin-bottom: 0.5rem; }
-h2 { font-size: 1.35rem; font-weight: 600; color: #0f172a; border-left: 4px solid #3b82f6; padding-left: 1rem; margin: 1.5rem 0 1rem 0; }
-.subtitle { color: #475569; font-size: 0.9rem; margin-bottom: 2rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1rem; }
+:root {
+    --olive:    #71713B;
+    --olive-dk: #57572e;
+    --steel:    #94A5B3;
+    --bone:     #E2DCD0;
+    --cream:    #F5F2EC;
+    --ink:      #1e1e1c;
+    --muted:    #6b6b66;
+    --line:     #dedad3;
+    --white:    #ffffff;
+    --red:      #8c3a25;
+    --red-bg:   #f6eeeb;
+    --red-line: #d4a898;
+    --grn:      #2e5c42;
+    --grn-bg:   #eaf2ed;
+    --grn-line: #96bfaa;
+}
 
-/* Metric Cards */
-.metric-card { background: white; padding: 1.2rem 1rem; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #e2e8f0; text-align: center; }
-.metric-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.5rem; }
-.metric-value { font-size: 2rem; font-weight: 700; color: #0f172a; }
-.metric-sub { font-size: 0.65rem; color: #94a3b8; margin-top: 0.25rem; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* Form Section */
-.form-section { background: white; border-radius: 24px; padding: 1.75rem; border: 1px solid #e2e8f0; margin-bottom: 2rem; }
+html, body, [class*="css"] {
+    font-family: 'Inter', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+}
 
-/* Form Elements */
-.stSlider label, .stSelectbox label, .stRadio label { font-size: 0.7rem !important; font-weight: 600 !important; color: #475569 !important; text-transform: uppercase; letter-spacing: 0.03em; }
-div[data-baseweb="slider"] div[role="slider"] { background-color: #3b82f6 !important; }
+/* ── hide streamlit chrome ── */
+#MainMenu, footer, header { visibility: hidden; }
+.block-container,
+[data-testid="stMainBlockContainer"],
+[data-testid="stAppViewBlockContainer"],
+section.main > div.block-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+}
+section[data-testid="stSidebar"] { display: none !important; }
+[data-testid="stDecoration"] { display: none !important; }
 
-/* Radio Buttons */
-div[role="radiogroup"] { display: flex; gap: 0.5rem; }
-div[role="radiogroup"] label { background: #f8fafc; border-radius: 40px; padding: 0.3rem 1rem; border: 1px solid #e2e8f0; }
-div[role="radiogroup"] label[data-selected="true"] { background: #3b82f6; border-color: #3b82f6; }
-div[role="radiogroup"] label[data-selected="true"] span { color: white !important; }
+/* ── HEADER ── */
+.hdr {
+    padding: 3rem clamp(2.5rem, 9vw, 8rem) 2.6rem;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
+}
+.hdr-eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+}
+.hdr-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.6rem, 4.2vw, 3.6rem);
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1.08;
+    color: var(--ink);
+    margin-bottom: 0.9rem;
+}
+.hdr-sub {
+    font-size: 0.83rem;
+    line-height: 1.72;
+    color: var(--muted);
+    font-weight: 300;
+    max-width: 520px;
+}
+.hdr-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+.stat-row { display: flex; align-items: baseline; gap: 0.55rem; }
+.stat-n {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.75rem;
+    font-weight: 400;
+    color: var(--olive);
+    line-height: 1;
+}
+.stat-l {
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+}
 
-/* Button */
-.stButton > button { width: 100%; background: linear-gradient(95deg, #0f172a 0%, #1e293b 100%); color: white; border: none; padding: 0.6rem 1rem; font-weight: 600; border-radius: 40px; transition: all 0.2s; }
-.stButton > button:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+/* ── PAGE BODY ── */
+.pg {
+    padding: 2.8rem clamp(2.5rem, 9vw, 8rem) 6rem;
+}
 
-/* Result Card */
-.result-card { background: white; border-radius: 24px; padding: 1.5rem; border: 1px solid #e2e8f0; margin: 1rem 0; }
-.result-card.risk { border-left: 8px solid #ef4444; background: #fef2f2; }
-.result-card.safe { border-left: 8px solid #10b981; background: #f0fdf9; }
-.result-title { font-size: 0.7rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.08em; color: #64748b; }
-.result-percentage { font-size: 3rem; font-weight: 800; line-height: 1.1; margin: 0.25rem 0; }
-.result-verdict { font-size: 1.1rem; font-weight: 600; }
-.risk .result-verdict { color: #dc2626; }
-.safe .result-verdict { color: #059669; }
+/* ── SECTION LABEL ── */
+.sl {
+    font-size: 0.63rem;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.8rem;
+}
 
-/* Factor Bar */
-.factor-item { margin-bottom: 1rem; }
-.factor-label { display: flex; justify-content: space-between; font-size: 0.75rem; color: #334155; margin-bottom: 0.25rem; }
-.factor-bar-bg { width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
-.factor-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+/* ── WIDGET LABELS ── */
+div[data-testid="stSlider"] > label,
+div[data-testid="stSelectbox"] > label,
+div[data-testid="stRadio"] > label {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.68rem !important;
+    font-weight: 500 !important;
+    color: var(--muted) !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+}
 
-/* Recommendation Card */
-.rec-card { background: white; border-radius: 16px; padding: 1rem; border: 1px solid #e2e8f0; height: 100%; }
-.rec-title { font-weight: 700; font-size: 0.8rem; margin-bottom: 0.5rem; color: #0f172a; }
-.rec-desc { font-size: 0.75rem; color: #475569; line-height: 1.5; }
+/* ── SLIDER track / fill / thumb ── */
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child,
+[data-testid="stSlider"] div[role="progressbar"] {
+    background: var(--line) !important;
+}
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div:nth-child(2) {
+    background: var(--olive) !important;
+}
+[data-testid="stSlider"] [role="slider"] {
+    background: var(--olive) !important;
+    border: 3px solid var(--cream) !important;
+    box-shadow: 0 0 0 2px var(--olive) !important;
+    width: 15px !important;
+    height: 15px !important;
+    border-radius: 50% !important;
+}
+[data-testid="stSlider"] p {
+    font-size: 0.68rem !important;
+    color: var(--muted) !important;
+    font-family: 'Inter', sans-serif !important;
+}
 
-/* Footer */
-.footer { text-align: center; padding: 2rem 0 1rem; border-top: 1px solid #e2e8f0; margin-top: 2rem; font-size: 0.65rem; color: #94a3b8; }
+/* ── SELECTBOX ── */
+[data-baseweb="select"] > div {
+    border-color: var(--line) !important;
+    border-radius: 3px !important;
+    background: var(--white) !important;
+    font-size: 0.85rem !important;
+}
+
+/* ── RADIO ── */
+[data-baseweb="radio"] [data-state="checked"] div,
+[data-baseweb="radio"] div[class*="radioInner"] {
+    background: var(--olive) !important;
+}
+[data-baseweb="radio"] label span:first-child {
+    border-color: var(--olive) !important;
+}
+div[data-testid="stRadio"] [data-baseweb="radio"] label {
+    font-size: 0.84rem !important;
+    color: var(--ink) !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 400 !important;
+}
+
+/* ── BUTTON ── */
+.stButton > button {
+    background: var(--olive) !important;
+    color: var(--white) !important;
+    border: none !important;
+    border-radius: 3px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.7rem !important;
+    font-weight: 500 !important;
+    letter-spacing: 0.16em !important;
+    text-transform: uppercase !important;
+    padding: 0.8rem 2rem !important;
+    transition: background 0.15s !important;
+    width: 100% !important;
+}
+.stButton > button:hover {
+    background: var(--olive-dk) !important;
+}
+
+/* ── RESULT BOX ── */
+.rbox {
+    border-radius: 4px;
+    padding: 2.2rem 2rem 2rem;
+}
+.rbox.risk { background: var(--red-bg);  border: 1px solid var(--red-line); }
+.rbox.safe { background: var(--grn-bg);  border: 1px solid var(--grn-line); }
+.r-eyebrow {
+    font-size: 0.62rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+.rbox.risk .r-eyebrow { color: var(--red); }
+.rbox.safe .r-eyebrow { color: var(--grn); }
+.r-pct {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 4.4rem;
+    font-weight: 300;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+.rbox.risk .r-pct { color: var(--red); }
+.rbox.safe .r-pct { color: var(--grn); }
+.r-verdict {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.2rem;
+    font-style: italic;
+    font-weight: 400;
+    margin-bottom: 0.55rem;
+}
+.rbox.risk .r-verdict { color: var(--red); }
+.rbox.safe .r-verdict { color: var(--grn); }
+.r-note {
+    font-size: 0.77rem;
+    color: var(--muted);
+    line-height: 1.65;
+    font-weight: 300;
+}
+
+/* ── GAUGE ── */
+.gauge { margin-top: 1.6rem; }
+.gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.45rem;
+}
+.gauge-track {
+    height: 3px;
+    background: var(--line);
+    border-radius: 2px;
+    position: relative;
+    overflow: visible;
+}
+.gauge-fill { height: 100%; border-radius: 2px; }
+.gauge-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--white);
+    box-shadow: 0 0 0 1.5px currentColor;
+}
+
+/* ── FACTOR ROWS ── */
+.frow {
+    display: grid;
+    grid-template-columns: 150px 1fr 40px;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--line);
+}
+.frow:last-child { border-bottom: none; }
+.fn {
+    font-size: 0.76rem;
+    color: var(--muted);
+    font-weight: 400;
+}
+.fb-bg {
+    height: 2px;
+    background: var(--line);
+    border-radius: 1px;
+    overflow: hidden;
+}
+.fb-fill { height: 100%; border-radius: 1px; }
+.fp {
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── REC CARD ── */
+.rcard {
+    padding: 1.1rem 1.25rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--white);
+    margin-bottom: 0.7rem;
+    height: calc(100% - 0.7rem);
+}
+.rcard.alert { border-left: 2px solid var(--red); }
+.rcard.ok    { border-left: 2px solid var(--grn); }
+.rc-title {
+    font-size: 0.76rem;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.02em;
+}
+.rc-desc {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.68;
+    font-weight: 300;
+}
+
+/* ── ABOUT ── */
+.ablock {
+    padding: 1.5rem 1.6rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--white);
+}
+.ablock h4 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    font-style: italic;
+    font-weight: 400;
+    color: var(--ink);
+    padding-bottom: 0.65rem;
+    margin-bottom: 0.85rem;
+    border-bottom: 1px solid var(--line);
+}
+.ablock p, .ablock li {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.78;
+    font-weight: 300;
+}
+.ablock ul { padding-left: 1.1rem; }
+.ablock li { margin-bottom: 0.1rem; }
+
+/* ── FOOTER ── */
+.ftr {
+    border-top: 1px solid var(--line);
+    padding: 1.5rem clamp(2.5rem, 9vw, 8rem);
+    font-size: 0.67rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* spacing */
+.s1 { margin-bottom: 0.8rem; }
+.s2 { margin-bottom: 1.6rem; }
+.s3 { margin-bottom: 3rem; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---- HEADER ----
+# ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div style="text-align: center; padding: 1.5rem 0 0.5rem;">
-    <h1>🎓 Dropout Risk Analyzer</h1>
-    <div class="subtitle">
-        Logistic Regression with SMOTE | Prioritizing <strong>Recall (76%)</strong> to minimize false negatives
+<div class="hdr">
+  <div>
+    <div class="hdr-eyebrow">Educational Analytics &mdash; Machine Learning</div>
+    <div class="hdr-title">Student Dropout<br>Predictor</div>
+    <div class="hdr-sub">
+      Identify students at risk of dropping out using logistic regression
+      trained on academic and lifestyle indicators.
     </div>
+  </div>
+  <div class="hdr-stats">
+    <div class="stat-row"><span class="stat-n">79.8%</span><span class="stat-l">Accuracy</span></div>
+    <div class="stat-row"><span class="stat-n">83.1%</span><span class="stat-l">Recall</span></div>
+    <div class="stat-row"><span class="stat-n">88.3%</span><span class="stat-l">ROC-AUC</span></div>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ---- METRICS ----
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.markdown('<div class="metric-card"><div class="metric-label">Model</div><div class="metric-value">Logistic Reg.</div><div class="metric-sub">+ SMOTE</div></div>', unsafe_allow_html=True)
-with col2:
-    st.markdown('<div class="metric-card"><div class="metric-label">Accuracy</div><div class="metric-value">74.4%</div><div class="metric-sub">Overall</div></div>', unsafe_allow_html=True)
-with col3:
-    st.markdown('<div class="metric-card"><div class="metric-label">Recall</div><div class="metric-value">75.8%</div><div class="metric-sub">⭐ Primary metric</div></div>', unsafe_allow_html=True)
-with col4:
-    st.markdown('<div class="metric-card"><div class="metric-label">ROC-AUC</div><div class="metric-value">0.819</div><div class="metric-sub">Discrimination</div></div>', unsafe_allow_html=True)
+# ── PAGE BODY ─────────────────────────────────────────────────────────────────
+st.markdown('<div class="pg">', unsafe_allow_html=True)
 
-# ---- INPUT FORM ----
-st.markdown('<div class="form-section">', unsafe_allow_html=True)
-st.markdown("### 📋 Student Profile")
+# ── INPUT FORM ────────────────────────────────────────────────────────────────
+st.markdown('<div class="sl">Student Profile</div>', unsafe_allow_html=True)
 
-left, right = st.columns(2)
+L, _gap, R = st.columns([10, 1, 10])
 
-with left:
-    gpa = st.slider("GPA", 0.0, 4.0, 2.8, 0.05)
-    attendance = st.slider("Attendance Rate (%)", 0.0, 100.0, 75.0, 1.0)
-    study_hours = st.slider("Study Hours per Day", 0.0, 12.0, 4.0, 0.5)
-    assignment_delay = st.slider("Assignment Delay (Days)", 0, 15, 3, 1)
-    semester = st.selectbox("Current Semester", ["Year 1", "Year 2", "Year 3", "Year 4"])
+with L:
+    st.markdown('<div class="s1"></div>', unsafe_allow_html=True)
+    gpa              = st.slider("GPA", 1.0, 4.0, 2.8, 0.05)
+    attendance       = st.slider("Attendance Rate (%)", 0.0, 100.0, 75.0, 0.5)
+    study_hours      = st.slider("Study Hours per Day", 0.0, 12.0, 4.0, 0.25)
+    assignment_delay = st.slider("Assignment Delay (Days)", 0, 15, 3)
+    semester         = st.selectbox("Current Year", ["Year 1","Year 2","Year 3","Year 4"])
 
-with right:
-    stress = st.slider("Stress Index (1-10)", 1.0, 10.0, 5.0, 0.5)
-    travel_time = st.slider("Travel Time to Campus (min)", 0, 120, 30, 5)
-    st.markdown("---")
-    internet = st.radio("Internet Access", ["Yes", "No"], horizontal=True)
-    part_time = st.radio("Part-Time Job", ["Yes", "No"], horizontal=True)
-    scholarship = st.radio("Scholarship", ["Yes", "No"], horizontal=True)
+with R:
+    st.markdown('<div class="s1"></div>', unsafe_allow_html=True)
+    stress      = st.slider("Stress Index (1–10)", 1.0, 10.0, 5.0, 0.1)
+    travel_time = st.slider("Travel Time to Campus (min)", 0, 120, 30)
+    st.markdown('<div class="s1"></div>', unsafe_allow_html=True)
+    internet    = st.radio("Internet Access",  ["Yes","No"], horizontal=True)
+    part_time   = st.radio("Part-Time Job",    ["Yes","No"], horizontal=True)
+    scholarship = st.radio("Scholarship",      ["Yes","No"], horizontal=True)
 
-_, btn_col, _ = st.columns([1, 2, 1])
+st.markdown('<div class="s2"></div>', unsafe_allow_html=True)
+_, btn_col, _ = st.columns([6, 6, 6])
 with btn_col:
-    predict_clicked = st.button("🔍 Predict Dropout Risk", use_container_width=True)
+    clicked = st.button("Run Prediction", use_container_width=True)
+
+st.markdown('<div class="s3"></div>', unsafe_allow_html=True)
+
+# ── RESULT ────────────────────────────────────────────────────────────────────
+if clicked:
+    inp = pd.DataFrame({
+        'Internet_Access':        [internet],
+        'Study_Hours_per_Day':    [study_hours],
+        'Attendance_Rate':        [attendance],
+        'Assignment_Delay_Days':  [float(assignment_delay)],
+        'Travel_Time_Minutes':    [float(travel_time)],
+        'Part_Time_Job':          [part_time],
+        'Scholarship':            [scholarship],
+        'Stress_Index':           [stress],
+        'GPA':                    [gpa],
+        'Semester':               [semester],
+    })
+
+    pred  = model.predict(inp)[0]
+    proba = model.predict_proba(inp)[0]
+    dp    = proba[1]   # dropout probability
+    sp    = proba[0]   # safe probability
+
+    st.markdown('<div class="sl">Result</div>', unsafe_allow_html=True)
+
+    col_res, col_fac = st.columns([5, 7])
+
+    # ── Result box ──
+    with col_res:
+        if pred == 1:
+            st.markdown(f"""
+            <div class="rbox risk">
+              <div class="r-eyebrow">Dropout Probability</div>
+              <div class="r-pct">{dp:.1%}</div>
+              <div class="r-verdict">At Risk of Dropout</div>
+              <div class="r-note">Immediate intervention is recommended for this student.</div>
+              <div class="gauge">
+                <div class="gauge-labels"><span>Low</span><span>High</span></div>
+                <div class="gauge-track">
+                  <div class="gauge-fill" style="width:{dp*100:.1f}%;background:#8c3a25;"></div>
+                  <div class="gauge-dot"  style="left:{dp*100:.1f}%;color:#8c3a25;"></div>
+                </div>
+              </div>
+            </div>""", unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="rbox safe">
+              <div class="r-eyebrow">Safe Probability</div>
+              <div class="r-pct">{sp:.1%}</div>
+              <div class="r-verdict">Not at Risk</div>
+              <div class="r-note">Student appears on track. Continue regular monitoring.</div>
+              <div class="gauge">
+                <div class="gauge-labels"><span>Low</span><span>High</span></div>
+                <div class="gauge-track">
+                  <div class="gauge-fill" style="width:{sp*100:.1f}%;background:#2e5c42;"></div>
+                  <div class="gauge-dot"  style="left:{sp*100:.1f}%;color:#2e5c42;"></div>
+                </div>
+              </div>
+            </div>""", unsafe_allow_html=True)
+
+    # ── Contributing factors ──
+    with col_fac:
+        st.markdown('<div class="sl">Contributing Factors</div>', unsafe_allow_html=True)
+
+        factors = [
+            ("Low GPA",           max(0.0, 1 - gpa / 4)),
+            ("Low Attendance",    max(0.0, 1 - attendance / 100)),
+            ("High Stress",       stress / 10),
+            ("Low Study Hours",   max(0.0, 1 - study_hours / 10)),
+            ("Assignment Delay",  assignment_delay / 15),
+            ("Part-Time Job",     1.0 if part_time == "Yes" else 0.0),
+            ("No Internet",       1.0 if internet == "No" else 0.0),
+            ("No Scholarship",    0.9 if scholarship == "No" else 0.0),
+        ]
+        factors.sort(key=lambda x: x[1], reverse=True)
+
+        rows = ""
+        for name, score in factors:
+            clr = "#8c3a25" if score > 0.65 else "#71713B" if score > 0.3 else "#94A5B3"
+            rows += f"""
+            <div class="frow">
+              <span class="fn">{name}</span>
+              <div class="fb-bg"><div class="fb-fill" style="width:{score*100:.0f}%;background:{clr};"></div></div>
+              <span class="fp">{score:.0%}</span>
+            </div>"""
+        st.markdown(f"<div>{rows}</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="s3"></div>', unsafe_allow_html=True)
+
+    # ── Recommendations ──
+    factor_scores = {
+        "attendance":  max(0.0, 1 - attendance / 100),
+        "gpa":         max(0.0, 1 - gpa / 4),
+        "stress":      stress / 10,
+        "study_hours": max(0.0, 1 - study_hours / 10),
+        "delay":       assignment_delay / 15,
+        "part_job":    1.0 if part_time == "Yes" else 0.0,
+        "internet":    1.0 if internet == "No" else 0.0,
+        "scholarship": 0.9 if scholarship == "No" else 0.0,
+    }
+
+    recs = []
+    if attendance < 80:
+        recs.append(("Attendance",
+            f"Attendance is at {attendance:.0f}%, below the recommended level. "
+            "Regular check-ins and attendance monitoring are advised."))
+    if gpa < 3.0:
+        recs.append(("Academic Performance",
+            f"GPA of {gpa:.2f} indicates academic difficulty. "
+            "Tutoring and academic mentoring are recommended."))
+    if stress > 6:
+        recs.append(("Stress Management",
+            f"Stress index is {stress:.1f}/10. "
+            "Refer to campus mental health or counseling services."))
+    if study_hours < 4:
+        recs.append(("Study Hours",
+            f"Only {study_hours:.1f} hours of study per day. "
+            "A structured study plan and time management coaching may help."))
+    if assignment_delay > 3:
+        recs.append(("Assignment Submission",
+            f"Assignments delayed by {assignment_delay} days on average. "
+            "A deadline tracker is recommended."))
+    if part_time == "Yes" and scholarship == "No":
+        recs.append(("Financial Aid",
+            "Student works part-time without a scholarship. "
+            "Explore financial aid options to reduce the work burden."))
+    if internet == "No":
+        recs.append(("Digital Access",
+            "No internet access may hinder coursework. "
+            "Explore campus connectivity or device lending programmes."))
+
+    # If model predicts dropout but nothing triggered, surface the worst 3 factors
+    if pred == 1 and not recs:
+        label_map = {
+            "attendance":  ("Attendance",          "Attendance rate is a contributing risk factor. Closer monitoring is advised."),
+            "gpa":         ("Academic Performance", "GPA is a contributing risk factor. Academic support is recommended."),
+            "stress":      ("Stress Levels",        "Elevated stress is a contributing risk factor. Mental health support is advised."),
+            "study_hours": ("Study Hours",          "Low study hours are a contributing risk factor. A structured plan may help."),
+            "delay":       ("Assignment Delays",    "Assignment delays contribute to dropout risk. Deadline tracking is recommended."),
+            "part_job":    ("Part-Time Work",       "Part-time employment increases dropout risk. Consider workload balance."),
+            "internet":    ("Digital Access",       "Limited internet access is a contributing risk factor."),
+            "scholarship": ("Financial Pressure",   "Lack of scholarship adds financial stress. Explore aid options."),
+        }
+        for key, _ in sorted(factor_scores.items(), key=lambda x: x[1], reverse=True)[:3]:
+            recs.append(label_map[key])
+
+    if not recs:
+        recs.append(("No Concerns Detected",
+            "All indicators are within healthy ranges. Continue regular monitoring."))
+
+    st.markdown('<div class="sl">Recommendations</div>', unsafe_allow_html=True)
+    card_cls = "alert" if pred == 1 else "ok"
+    cols = st.columns(3)
+    for i, (title, desc) in enumerate(recs):
+        with cols[i % 3]:
+            st.markdown(f"""
+            <div class="rcard {card_cls}">
+              <div class="rc-title">{title}</div>
+              <div class="rc-desc">{desc}</div>
+            </div>""", unsafe_allow_html=True)
+
+    st.markdown('<div class="s3"></div>', unsafe_allow_html=True)
+
+# ── ABOUT ─────────────────────────────────────────────────────────────────────
+st.markdown('<div class="sl">About</div>', unsafe_allow_html=True)
+a1, a2, a3 = st.columns(3)
+
+with a1:
+    st.markdown("""
+    <div class="ablock">
+      <h4>Algorithm</h4>
+      <p>Logistic Regression with oversampling to handle class imbalance.
+      Selected for its superior Recall — critical for catching at-risk students
+      before they drop out.</p>
+    </div>""", unsafe_allow_html=True)
+
+with a2:
+    st.markdown("""
+    <div class="ablock">
+      <h4>Features Used</h4>
+      <ul>
+        <li>GPA &amp; Attendance Rate</li>
+        <li>Study Hours per Day</li>
+        <li>Stress Index</li>
+        <li>Assignment Delay Days</li>
+        <li>Travel Time to Campus</li>
+        <li>Internet Access</li>
+        <li>Part-Time Job, Scholarship, Semester</li>
+      </ul>
+    </div>""", unsafe_allow_html=True)
+
+with a3:
+    st.markdown("""
+    <div class="ablock">
+      <h4>Why Recall Matters</h4>
+      <p>Missing an at-risk student (False Negative) is far more costly than a false alarm.
+      This model is optimised for Recall to maximise detection of students
+      who need intervention.</p>
+    </div>""", unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ---- PREDICTION ----
-if predict_clicked:
-    input_data = pd.DataFrame([{
-        'GPA': gpa,
-        'Attendance_Rate': attendance,
-        'Study_Hours_per_Day': study_hours,
-        'Assignment_Delay_Days': float(assignment_delay),
-        'Stress_Index': stress,
-        'Travel_Time_Minutes': float(travel_time),
-        'Internet_Access': internet,
-        'Part_Time_Job': part_time,
-        'Scholarship': scholarship,
-        'Semester': semester,
-    }])
-    
-    proba = model.predict_proba(input_data)[0]
-    risk_prob = proba[1]
-    safe_prob = proba[0]
-    prediction = model.predict(input_data)[0]
-    
-    st.markdown("### 📊 Prediction Result")
-    result_col, factors_col = st.columns([5, 7])
-    
-    with result_col:
-        if prediction == 1:
-            st.markdown(f"""
-            <div class="result-card risk">
-                <div class="result-title">Dropout Probability</div>
-                <div class="result-percentage">{risk_prob:.1%}</div>
-                <div class="result-verdict">⚠️ At Risk of Dropout</div>
-                <div style="margin-top: 1rem; background:#e2e8f0; border-radius: 40px; height: 8px;">
-                    <div style="width: {risk_prob*100:.1f}%; background:#ef4444; border-radius: 40px; height: 8px;"></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class="result-card safe">
-                <div class="result-title">Safe Probability</div>
-                <div class="result-percentage">{safe_prob:.1%}</div>
-                <div class="result-verdict">✅ Not at Risk</div>
-                <div style="margin-top: 1rem; background:#e2e8f0; border-radius: 40px; height: 8px;">
-                    <div style="width: {safe_prob*100:.1f}%; background:#10b981; border-radius: 40px; height: 8px;"></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    with factors_col:
-        st.markdown("#### 🔍 Contributing Factors")
-        contributions = {}
-        
-        if gpa < 3.0:
-            contributions['Low GPA'] = min(1.0, abs(COEF_DATA['GPA']) * (1 - gpa/4))
-        if attendance < 80:
-            contributions['Low Attendance'] = min(1.0, abs(COEF_DATA['Attendance Rate (%)']) * (1 - attendance/100))
-        if stress > 6:
-            contributions['High Stress'] = min(1.0, COEF_DATA['Stress Index'] * (stress/10))
-        if assignment_delay > 2:
-            contributions['Assignment Delay'] = min(1.0, COEF_DATA['Assignment Delay (Days)'] * (assignment_delay/15))
-        if study_hours < 5:
-            contributions['Low Study Hours'] = min(1.0, abs(COEF_DATA['Study Hours per Day']) * (1 - study_hours/12))
-        if part_time == "Yes":
-            contributions['Part-Time Job'] = 0.4
-        if internet == "No":
-            contributions['No Internet Access'] = 0.6
-        if scholarship == "No":
-            contributions['No Scholarship'] = 0.35
-        
-        for name, score in sorted(contributions.items(), key=lambda x: x[1], reverse=True)[:5]:
-            color = "#ef4444" if score > 0.6 else "#f97316" if score > 0.3 else "#3b82f6"
-            st.markdown(f"""
-            <div class="factor-item">
-                <div class="factor-label"><span>{name}</span><span>{score:.0%}</span></div>
-                <div class="factor-bar-bg"><div class="factor-bar-fill" style="width: {score*100:.0f}%; background: {color};"></div></div>
-            </div>
-            """, unsafe_allow_html=True)
-    
-    # Recommendations
-    st.markdown("### 💡 Recommendations")
-    recs = []
-    if gpa < 2.5:
-        recs.append(("📚 Academic Support", "Low GPA. Recommend tutoring and academic counseling."))
-    if attendance < 75:
-        recs.append(("📅 Attendance Plan", f"Attendance at {attendance:.0f}%. Set up monitoring."))
-    if stress > 7:
-        recs.append(("🧠 Counseling", "High stress. Refer to mental health services."))
-    if assignment_delay > 5:
-        recs.append(("📝 Deadline Management", f"{assignment_delay} days delay. Implement tracking."))
-    if study_hours < 3:
-        recs.append(("📖 Study Coaching", "Low study hours. Suggest structured schedule."))
-    if internet == "No":
-        recs.append(("🌐 Digital Access", "Provide campus Wi-Fi or device lending."))
-    
-    if not recs:
-        recs.append(("✅ On Track", "All indicators within healthy ranges. Continue monitoring."))
-    
-    rec_cols = st.columns(3)
-    for i, (title, desc) in enumerate(recs[:3]):
-        with rec_cols[i % 3]:
-            st.markdown(f'<div class="rec-card"><div class="rec-title">{title}</div><div class="rec-desc">{desc}</div></div>', unsafe_allow_html=True)
-
-# ---- FOOTER ----
+# ── FOOTER ────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="footer">
-    Student Dropout Risk Analyzer | Logistic Regression + SMOTE | Prioritizing Recall to Minimize False Negatives
+<div class="ftr">
+  Student Dropout Predictor &nbsp;&middot;&nbsp; Logistic Regression &nbsp;&middot;&nbsp; Streamlit
 </div>
 """, unsafe_allow_html=True)
