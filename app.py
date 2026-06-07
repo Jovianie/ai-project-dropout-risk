@@ -229,21 +229,31 @@ div[data-testid="stRadio"] > label {
     color: var(--ink-light) !important;
 }
 
-/* RADIO - paksa vertikal */
+/* ── FORCE ALL RADIO BUTTONS HORIZONTAL & ALIGNED ── */
 div[data-testid="stRadio"] {
     display: flex !important;
-    flex-direction: column !important;
-    gap: 0.5rem !important;
+    flex-direction: row !important;
+    gap: 2rem !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
 }
 
 div[data-testid="stRadio"] > label {
-    display: flex !important;
+    display: inline-flex !important;
     align-items: center !important;
     gap: 0.5rem !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
 }
 
-.row-widget.stRadio {
-    flex-direction: column !important;
+div[data-testid="stRadio"] [data-baseweb="radio"] {
+    display: inline-flex !important;
+    margin-right: 0 !important;
+}
+
+/* Hilangkan jarak berlebih antar radio */
+.row-widget.stRadio > div {
+    gap: 2rem !important;
 }
 
 /* SELECTBOX */
@@ -475,9 +485,9 @@ with R:
     stress      = st.slider("Stress Index (1–10)", 1.0, 10.0, 5.0, 0.1)
     travel_time = st.slider("Travel Time to Campus (min)", 0, 120, 30)
     st.markdown('<div class="s1"></div>', unsafe_allow_html=True)
-    internet    = st.radio("Internet Access",  ["Yes","No"])
-    part_time   = st.radio("Part-Time Job",    ["Yes","No"])
-    scholarship = st.radio("Scholarship",      ["Yes","No"])
+    internet    = st.radio("Internet Access",  ["Yes","No"], horizontal=True)
+    part_time   = st.radio("Part-Time Job",    ["Yes","No"], horizontal=True)
+    scholarship = st.radio("Scholarship",      ["Yes","No"], horizontal=True)
 
 st.markdown('<div class="s2"></div>', unsafe_allow_html=True)
 _, btn_col, _ = st.columns([6, 6, 6])
