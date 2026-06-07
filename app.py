@@ -12,7 +12,7 @@ from sklearn.linear_model import LogisticRegression
 # ── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Student Dropout Predictor",
-    page_icon="🎓",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -74,18 +74,14 @@ def load_model():
     ])
     categorical_transformer = Pipeline([
         ('imp',  SimpleImputer(strategy='most_frequent')),
-        ('ohe',  OneHotEncoder(handle_unknown='ignore')),   # sparse_output removed for compatibility
+        ('ohe',  OneHotEncoder(handle_unknown='ignore')),
     ])
     preprocessor = ColumnTransformer([
         ('num', numeric_transformer,     numeric_features),
         ('cat', categorical_transformer, categorical_features),
     ], remainder='drop')
 
-    # Apply SMOTE manually — keeps pipeline sklearn-only (no imblearn dependency)
-    from collections import Counter
     X_train_prep = preprocessor.fit_transform(X_train)
-
-    # Manual oversampling of minority class (equivalent to SMOTE effect for LR)
     minority_idx = np.where(y_train == 1)[0]
     majority_idx = np.where(y_train == 0)[0]
     n_oversample = len(majority_idx) - len(minority_idx)
@@ -100,686 +96,571 @@ def load_model():
         ('preprocessor', preprocessor),
         ('model',        lr),
     ])
-
     return pipeline
 
 model = load_model()
 
-# ── Custom CSS ─────────────────────────────────────────────────────────────────
+# ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Inter:wght@300;400;500&display=swap');
 
-/* ── Root palette ── */
 :root {
-    --cool-steel:  #94A5B3;
-    --steel-light: #b8c8d4;
-    --steel-dark:  #6b8494;
-    --olive:       #71713B;
-    --olive-light: #8e8e50;
-    --olive-dark:  #555530;
-    --bone:        #E2DCD0;
-    --bone-dark:   #cfc8ba;
-    --cream:       #F7F4EF;
-    --ink:         #2C2C2A;
-    --ink-soft:    #4a4a46;
-    --warn-red:    #b85c42;
-    --warn-light:  #f4ede9;
+    --steel:   #94A5B3;
+    --olive:   #71713B;
+    --bone:    #E2DCD0;
+    --cream:   #F5F2EC;
+    --ink:     #1e1e1c;
+    --muted:   #6b6b66;
+    --line:    #d8d3cb;
+    --red:     #a0452e;
+    --red-bg:  #f7efec;
+    --green:   #3d6650;
+    --green-bg:#ecf2ee;
 }
 
-/* ── Global reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
 html, body, [class*="css"] {
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
+    background: var(--cream);
     color: var(--ink);
-    background-color: var(--cream);
 }
 
-/* ── Hide default Streamlit chrome ── */
 #MainMenu, footer, header { visibility: hidden; }
 .block-container { padding: 0 !important; max-width: 100% !important; }
+section[data-testid="stSidebar"] { display: none; }
 
-/* ── Hero banner ── */
-.hero {
-    background: var(--cool-steel);
-    padding: 3.5rem 4rem 3rem;
-    position: relative;
-    overflow: hidden;
+/* ── HEADER ── */
+.hdr {
+    background: var(--cream);
+    border-bottom: 1px solid var(--line);
+    padding: 2.8rem 5vw 2.4rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2rem;
 }
-.hero::before {
-    content: '';
-    position: absolute;
-    top: -60px; right: -60px;
-    width: 320px; height: 320px;
-    background: var(--steel-light);
-    border-radius: 50%;
-    opacity: 0.35;
-}
-.hero::after {
-    content: '';
-    position: absolute;
-    bottom: -40px; left: 35%;
-    width: 180px; height: 180px;
-    background: var(--steel-dark);
-    border-radius: 50%;
-    opacity: 0.2;
-}
-.hero-label {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.72rem;
-    font-weight: 500;
-    letter-spacing: 0.22em;
+.hdr-left { max-width: 600px; }
+.hdr-tag {
+    font-size: 0.68rem;
+    letter-spacing: 0.18em;
     text-transform: uppercase;
-    color: var(--bone);
-    opacity: 0.85;
-    margin-bottom: 0.6rem;
-}
-.hero-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 3.2rem;
-    font-weight: 700;
-    font-style: italic;
-    color: #fff;
-    line-height: 1.15;
-    margin: 0 0 0.75rem;
-}
-.hero-sub {
-    font-family: 'Lora', serif;
-    font-size: 1.05rem;
-    color: var(--bone);
-    opacity: 0.9;
-    max-width: 560px;
-    line-height: 1.65;
-}
-.hero-badge {
-    display: inline-block;
-    background: rgba(255,255,255,0.18);
-    border: 1px solid rgba(255,255,255,0.3);
-    border-radius: 2rem;
-    padding: 0.28rem 0.9rem;
-    font-size: 0.75rem;
+    color: var(--muted);
     font-weight: 500;
-    letter-spacing: 0.06em;
-    color: #fff;
-    margin-top: 1.2rem;
-    backdrop-filter: blur(4px);
+    margin-bottom: 0.7rem;
+}
+.hdr-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.4rem, 4vw, 3.4rem);
+    font-weight: 500;
+    font-style: italic;
+    line-height: 1.1;
+    color: var(--ink);
+    margin-bottom: 0.8rem;
+}
+.hdr-desc {
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--muted);
+    font-weight: 300;
+}
+.hdr-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.45rem;
+    flex-shrink: 0;
+}
+.stat-pill {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+.stat-val {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.7rem;
+    font-weight: 500;
+    color: var(--olive);
+    line-height: 1;
+}
+.stat-lbl {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
 }
 
-/* ── Main content wrapper ── */
-.main-wrap {
-    padding: 2.5rem 4rem 4rem;
-    max-width: 1280px;
+/* ── BODY ── */
+.body {
+    padding: 3rem 5vw 5rem;
+    max-width: 1320px;
     margin: 0 auto;
 }
 
-/* ── Section title ── */
-.section-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.55rem;
-    font-weight: 600;
-    color: var(--ink);
-    margin: 0 0 0.3rem;
-}
-.section-sub {
-    font-family: 'Lora', serif;
-    font-size: 0.9rem;
-    font-style: italic;
-    color: var(--ink-soft);
-    margin: 0 0 1.5rem;
-}
-.divider {
-    height: 2px;
-    background: linear-gradient(90deg, var(--olive) 0%, var(--bone-dark) 60%, transparent 100%);
-    border: none;
-    margin: 1.2rem 0 2rem;
-}
-
-/* ── Cards ── */
-.card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 1.6rem 1.8rem;
-    border: 1px solid var(--bone-dark);
-    box-shadow: 0 2px 12px rgba(44,44,42,0.06);
-    height: 100%;
-}
-.card-olive {
-    background: var(--olive);
-    border-color: var(--olive-dark);
-}
-.card-steel {
-    background: var(--cool-steel);
-    border-color: var(--steel-dark);
-}
-.card-bone {
-    background: var(--bone);
-    border-color: var(--bone-dark);
-}
-
-/* ── Info metric tiles ── */
-.metric-tile {
-    background: #fff;
-    border-radius: 10px;
-    padding: 1.2rem 1.4rem;
-    border: 1px solid var(--bone-dark);
-    text-align: center;
-}
-.metric-val {
-    font-family: 'Playfair Display', serif;
-    font-size: 2.1rem;
-    font-weight: 700;
-    color: var(--olive);
-    line-height: 1;
-    margin-bottom: 0.3rem;
-}
-.metric-lbl {
-    font-size: 0.78rem;
-    letter-spacing: 0.1em;
+/* ── SECTION LABEL ── */
+.sec-label {
+    font-size: 0.67rem;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--ink-soft);
+    color: var(--muted);
     font-weight: 500;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 1.6rem;
 }
 
-/* ── Slider label ── */
-.input-label {
-    font-family: 'Lora', serif;
-    font-size: 0.88rem;
-    font-style: italic;
-    color: var(--ink-soft);
-    margin-bottom: 0.25rem;
-}
-
-/* ── Streamlit widget overrides ── */
+/* ── WIDGET OVERRIDES ── */
 div[data-testid="stSlider"] > label,
 div[data-testid="stSelectbox"] > label,
 div[data-testid="stRadio"] > label,
 div[data-testid="stNumberInput"] > label {
-    font-family: 'Lora', serif !important;
-    font-size: 0.9rem !important;
-    font-style: italic !important;
-    color: var(--ink-soft) !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.78rem !important;
     font-weight: 500 !important;
+    color: var(--muted) !important;
+    letter-spacing: 0.04em !important;
+    text-transform: uppercase !important;
 }
-div[data-testid="stSlider"] [data-baseweb="slider"] {
-    margin-top: 0.25rem;
-}
-
-/* ── Slider thumb color ── */
-div[data-testid="stSlider"] [role="slider"] {
-    background: var(--olive) !important;
-    border-color: var(--olive) !important;
-}
+/* slider track */
 div[data-testid="stSlider"] [data-baseweb="slider"] > div:first-child {
-    background: var(--bone-dark) !important;
+    background: var(--line) !important;
 }
 div[data-testid="stSlider"] [data-baseweb="slider"] > div:nth-child(2) {
     background: var(--olive) !important;
 }
-
-/* ── Radio buttons ── */
-div[data-testid="stRadio"] [data-baseweb="radio"] {
-    gap: 0.4rem !important;
+div[data-testid="stSlider"] [role="slider"] {
+    background: var(--olive) !important;
+    border-color: var(--olive) !important;
+    width: 14px !important;
+    height: 14px !important;
 }
-
-/* ── Selectbox ── */
+/* selectbox */
 div[data-baseweb="select"] > div {
-    border-color: var(--bone-dark) !important;
-    border-radius: 8px !important;
-    background: #faf9f7 !important;
+    border-color: var(--line) !important;
+    border-radius: 4px !important;
+    background: #fff !important;
+    font-size: 0.88rem !important;
 }
+/* radio */
+div[data-testid="stRadio"] [data-baseweb="radio"] label {
+    font-size: 0.85rem !important;
+    color: var(--ink) !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+    font-weight: 400 !important;
+}
+/* remove red asterisk / required label clutter */
+.st-emotion-cache-1gulkj5 { display: none !important; }
 
-/* ── Primary button ── */
-.stButton > button[kind="primary"],
+/* ── BUTTON ── */
 .stButton > button {
     background: var(--olive) !important;
     color: #fff !important;
     border: none !important;
-    border-radius: 8px !important;
-    font-family: 'DM Sans', sans-serif !important;
+    border-radius: 3px !important;
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.78rem !important;
     font-weight: 500 !important;
-    font-size: 0.95rem !important;
-    letter-spacing: 0.04em !important;
-    padding: 0.65rem 2.2rem !important;
-    transition: background 0.2s, transform 0.15s !important;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
+    padding: 0.75rem 2.4rem !important;
+    transition: opacity 0.15s !important;
     width: 100%;
 }
-.stButton > button:hover {
-    background: var(--olive-dark) !important;
-    transform: translateY(-1px) !important;
-}
+.stButton > button:hover { opacity: 0.82 !important; }
 
-/* ── Result boxes ── */
-.result-dropout {
-    background: var(--warn-light);
-    border: 2px solid var(--warn-red);
-    border-radius: 12px;
-    padding: 2rem 2.2rem;
-    text-align: center;
+/* ── RESULT ── */
+.result-box {
+    border-radius: 4px;
+    padding: 2rem 2rem 1.8rem;
 }
-.result-safe {
-    background: #eef3f0;
-    border: 2px solid #4a8060;
-    border-radius: 12px;
-    padding: 2rem 2.2rem;
-    text-align: center;
+.result-box.risk    { background: var(--red-bg);   border: 1px solid #d9b5aa; }
+.result-box.safe    { background: var(--green-bg); border: 1px solid #a8c5b4; }
+.res-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 0.6rem;
 }
-.result-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 2rem;
-    font-weight: 700;
+.result-box.risk  .res-label { color: var(--red); }
+.result-box.safe  .res-label { color: var(--green); }
+.res-pct {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 4.2rem;
+    font-weight: 400;
+    line-height: 1;
+    margin-bottom: 0.35rem;
+}
+.result-box.risk .res-pct  { color: var(--red); }
+.result-box.safe .res-pct  { color: var(--green); }
+.res-verdict {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
     font-style: italic;
+    font-weight: 400;
     margin-bottom: 0.4rem;
 }
-.result-dropout .result-title { color: var(--warn-red); }
-.result-safe .result-title { color: #3a6b50; }
-.result-prob {
-    font-family: 'Playfair Display', serif;
-    font-size: 3.2rem;
-    font-weight: 700;
-    line-height: 1;
-    margin: 0.5rem 0 0.3rem;
-}
-.result-dropout .result-prob { color: var(--warn-red); }
-.result-safe .result-prob { color: #3a6b50; }
-.result-desc {
-    font-family: 'Lora', serif;
-    font-style: italic;
-    font-size: 0.92rem;
-    color: var(--ink-soft);
-    margin-top: 0.5rem;
-}
-
-/* ── Feature bar ── */
-.feat-row {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    margin-bottom: 0.55rem;
-}
-.feat-name {
-    font-family: 'Lora', serif;
-    font-style: italic;
-    font-size: 0.84rem;
-    color: var(--ink-soft);
-    width: 180px;
-    flex-shrink: 0;
-}
-.feat-bar-wrap {
-    flex: 1;
-    background: var(--bone);
-    border-radius: 4px;
-    height: 8px;
-    overflow: hidden;
-}
-.feat-bar {
-    height: 100%;
-    border-radius: 4px;
-}
-.feat-val {
-    font-family: 'DM Sans', sans-serif;
+.result-box.risk .res-verdict { color: var(--red); }
+.result-box.safe .res-verdict { color: var(--green); }
+.res-note {
     font-size: 0.78rem;
-    font-weight: 500;
-    color: var(--ink-soft);
-    width: 44px;
-    text-align: right;
+    color: var(--muted);
+    line-height: 1.6;
+    font-weight: 300;
 }
 
-/* ── About section ── */
-.about-card {
-    background: var(--olive);
-    border-radius: 12px;
-    padding: 2rem 2.2rem;
-    color: #fff;
-}
-.about-card h3 {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.2rem;
-    font-weight: 600;
-    font-style: italic;
-    color: var(--bone);
-    margin-bottom: 0.8rem;
-}
-.about-card p, .about-card li {
-    font-family: 'Lora', serif;
-    font-size: 0.88rem;
-    line-height: 1.7;
-    color: rgba(255,255,255,0.85);
-}
-
-/* ── Footer ── */
-.footer {
-    background: var(--ink);
-    padding: 1.8rem 4rem;
-    text-align: center;
-    margin-top: 3rem;
-}
-.footer p {
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.82rem;
-    color: rgba(255,255,255,0.45);
-    margin: 0;
-    letter-spacing: 0.05em;
-}
-
-/* ── Responsive gap utilities ── */
-.gap-sm { margin-bottom: 0.8rem; }
-.gap-md { margin-bottom: 1.5rem; }
-.gap-lg { margin-bottom: 2.5rem; }
-
-/* ── Column spacer ── */
-.col-spacer { padding: 0 0.5rem; }
-
-/* ── Risk gauge text ── */
-.gauge-wrap {
-    position: relative;
-    text-align: center;
-    padding: 0.5rem 0;
-}
-.gauge-track {
-    height: 14px;
-    background: linear-gradient(90deg, #4a8060 0%, #d4a847 45%, var(--warn-red) 100%);
-    border-radius: 8px;
-    position: relative;
-    margin: 0.8rem 0 0.4rem;
-}
-.gauge-needle {
-    position: absolute;
-    top: -5px;
-    width: 4px;
-    height: 24px;
-    background: var(--ink);
-    border-radius: 2px;
-    transform: translateX(-50%);
-    transition: left 0.5s ease;
-}
-.gauge-labels {
+/* ── GAUGE ── */
+.gauge-wrap { margin-top: 1.4rem; }
+.gauge-top {
     display: flex;
     justify-content: space-between;
-    font-size: 0.72rem;
-    color: var(--ink-soft);
-    font-family: 'DM Sans', sans-serif;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
 }
+.gauge-track {
+    height: 4px;
+    background: var(--line);
+    border-radius: 2px;
+    position: relative;
+    overflow: visible;
+}
+.gauge-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+}
+.gauge-dot {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--ink);
+}
+
+/* ── FACTOR BARS ── */
+.factor-row {
+    display: grid;
+    grid-template-columns: 148px 1fr 38px;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--line);
+}
+.factor-row:last-child { border-bottom: none; }
+.factor-name {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 400;
+}
+.factor-bar-bg {
+    height: 3px;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.factor-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+}
+.factor-pct {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-align: right;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── REC CARD ── */
+.rec-card {
+    padding: 1.2rem 1.3rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fff;
+    margin-bottom: 0.6rem;
+}
+.rec-title {
+    font-size: 0.78rem;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    color: var(--ink);
+    margin-bottom: 0.3rem;
+}
+.rec-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.65;
+    font-weight: 300;
+}
+.rec-card.alert { border-left: 2px solid var(--red); }
+.rec-card.ok    { border-left: 2px solid var(--green); }
+
+/* ── ABOUT CARDS ── */
+.about-block {
+    padding: 1.4rem 1.6rem;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #fff;
+    height: 100%;
+}
+.about-block h4 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--ink);
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--line);
+}
+.about-block p, .about-block li {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.75;
+    font-weight: 300;
+}
+.about-block ul { padding-left: 1rem; }
+.about-block li { margin-bottom: 0.15rem; }
+
+/* ── FOOTER ── */
+.ftr {
+    border-top: 1px solid var(--line);
+    padding: 1.4rem 5vw;
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* ── SPACING HELPERS ── */
+.sp-sm { margin-bottom: 0.8rem; }
+.sp-md { margin-bottom: 1.6rem; }
+.sp-lg { margin-bottom: 2.8rem; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Hero ───────────────────────────────────────────────────────────────────────
+# ── HEADER ────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="hero">
-    <p class="hero-label">Machine Learning · Educational Analytics</p>
-    <h1 class="hero-title">Student Dropout<br>Predictor</h1>
-    <p class="hero-sub">
-        Identify students at risk of dropping out using logistic regression
-        trained on academic and lifestyle indicators.
-    </p>
-    <span class="hero-badge">🎓 Logistic Regression · SMOTE · ROC-AUC 88%</span>
+<div class="hdr">
+    <div class="hdr-left">
+        <div class="hdr-tag">Educational Analytics &mdash; Machine Learning</div>
+        <div class="hdr-title">Student Dropout<br>Predictor</div>
+        <div class="hdr-desc">
+            Identify students at risk of dropping out using logistic regression
+            trained on academic and lifestyle indicators.
+        </div>
+    </div>
+    <div class="hdr-right">
+        <div class="stat-pill">
+            <span class="stat-val">79.8%</span>
+            <span class="stat-lbl">Accuracy</span>
+        </div>
+        <div class="stat-pill">
+            <span class="stat-val">83.1%</span>
+            <span class="stat-lbl">Recall</span>
+        </div>
+        <div class="stat-pill">
+            <span class="stat-val">88.3%</span>
+            <span class="stat-lbl">ROC-AUC</span>
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Main layout ────────────────────────────────────────────────────────────────
-st.markdown('<div class="main-wrap">', unsafe_allow_html=True)
+# ── BODY ──────────────────────────────────────────────────────────────────────
+st.markdown('<div class="body">', unsafe_allow_html=True)
 
-# ── Stats row ─────────────────────────────────────────────────────────────────
-st.markdown('<div class="gap-lg"></div>', unsafe_allow_html=True)
-st.markdown('<p class="section-title">Model Overview</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-sub">Performance metrics from test set evaluation</p>', unsafe_allow_html=True)
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
+# ── INPUT FORM ────────────────────────────────────────────────────────────────
+st.markdown('<div class="sec-label">Student Profile</div>', unsafe_allow_html=True)
 
-m1, m2, m3, m4 = st.columns(4)
-metrics_data = [
-    ("79.75%", "Accuracy"),
-    ("83.06%", "Recall"),
-    ("78.96%", "F1-Score"),
-    ("88.29%", "ROC-AUC"),
-]
-for col, (val, lbl) in zip([m1, m2, m3, m4], metrics_data):
-    with col:
-        st.markdown(f"""
-        <div class="metric-tile">
-            <div class="metric-val">{val}</div>
-            <div class="metric-lbl">{lbl}</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-st.markdown('<div class="gap-lg"></div>', unsafe_allow_html=True)
-
-# ── Input form ────────────────────────────────────────────────────────────────
-st.markdown('<p class="section-title">Student Profile Input</p>', unsafe_allow_html=True)
-st.markdown('<p class="section-sub">Fill in the student\'s academic and lifestyle details below</p>', unsafe_allow_html=True)
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
-
-left_col, spacer, right_col = st.columns([5, 0.4, 5])
+left_col, gap_col, right_col = st.columns([11, 1, 11])
 
 with left_col:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("**📚 Academic Indicators**")
-    st.markdown('<div class="gap-sm"></div>', unsafe_allow_html=True)
-
-    gpa = st.slider(
-        "GPA (Grade Point Average)",
-        min_value=1.0, max_value=4.0, value=2.8, step=0.05,
-        help="Student's current GPA on a 4.0 scale"
-    )
-    attendance = st.slider(
-        "Attendance Rate (%)",
-        min_value=0.0, max_value=100.0, value=75.0, step=0.5,
-        help="Percentage of classes attended"
-    )
-    study_hours = st.slider(
-        "Study Hours per Day",
-        min_value=0.0, max_value=12.0, value=4.0, step=0.25,
-        help="Average daily study hours"
-    )
-    assignment_delay = st.slider(
-        "Assignment Delay (Days)",
-        min_value=0, max_value=15, value=3,
-        help="Average number of days assignments are submitted late"
-    )
-    semester = st.selectbox(
-        "Current Semester / Year",
-        options=["Year 1", "Year 2", "Year 3", "Year 4"],
-        index=0
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sp-sm"></div>', unsafe_allow_html=True)
+    gpa = st.slider("GPA", min_value=1.0, max_value=4.0, value=2.8, step=0.05)
+    attendance = st.slider("Attendance Rate (%)", min_value=0.0, max_value=100.0, value=75.0, step=0.5)
+    study_hours = st.slider("Study Hours per Day", min_value=0.0, max_value=12.0, value=4.0, step=0.25)
+    assignment_delay = st.slider("Assignment Delay (Days)", min_value=0, max_value=15, value=3)
+    semester = st.selectbox("Current Year", options=["Year 1", "Year 2", "Year 3", "Year 4"])
 
 with right_col:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.markdown("**🌱 Lifestyle & Support Indicators**")
-    st.markdown('<div class="gap-sm"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sp-sm"></div>', unsafe_allow_html=True)
+    stress = st.slider("Stress Index (1–10)", min_value=1.0, max_value=10.0, value=5.0, step=0.1)
+    travel_time = st.slider("Travel Time to Campus (min)", min_value=0, max_value=120, value=30)
+    st.markdown('<div class="sp-sm"></div>', unsafe_allow_html=True)
+    internet = st.radio("Internet Access", options=["Yes", "No"], horizontal=True)
+    part_time = st.radio("Part-Time Job", options=["Yes", "No"], horizontal=True)
+    scholarship = st.radio("Scholarship", options=["Yes", "No"], horizontal=True)
 
-    stress = st.slider(
-        "Stress Index (1 = Low, 10 = Very High)",
-        min_value=1.0, max_value=10.0, value=5.0, step=0.1,
-        help="Self-reported stress level"
-    )
-    travel_time = st.slider(
-        "Travel Time to Campus (Minutes)",
-        min_value=0, max_value=120, value=30,
-        help="Daily commute time in minutes"
-    )
+st.markdown('<div class="sp-md"></div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="gap-sm"></div>', unsafe_allow_html=True)
-    internet = st.radio(
-        "Has Internet Access?",
-        options=["Yes", "No"],
-        horizontal=True
-    )
-    part_time = st.radio(
-        "Has Part-Time Job?",
-        options=["Yes", "No"],
-        horizontal=True
-    )
-    scholarship = st.radio(
-        "Receiving Scholarship?",
-        options=["Yes", "No"],
-        horizontal=True
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown('<div class="gap-md"></div>', unsafe_allow_html=True)
-
-# ── Predict button ─────────────────────────────────────────────────────────────
-_, btn_col, _ = st.columns([3, 4, 3])
+_, btn_col, _ = st.columns([7, 6, 7])
 with btn_col:
-    predict_clicked = st.button("✦ Predict Dropout Risk", use_container_width=True)
+    predict_clicked = st.button("Run Prediction", use_container_width=True)
 
-st.markdown('<div class="gap-lg"></div>', unsafe_allow_html=True)
+st.markdown('<div class="sp-lg"></div>', unsafe_allow_html=True)
 
-# ── Result ────────────────────────────────────────────────────────────────────
+# ── RESULT ────────────────────────────────────────────────────────────────────
 if predict_clicked:
     input_df = pd.DataFrame({
-        'Internet_Access': [internet],
-        'Study_Hours_per_Day': [study_hours],
-        'Attendance_Rate': [attendance],
-        'Assignment_Delay_Days': [float(assignment_delay)],
-        'Travel_Time_Minutes': [float(travel_time)],
-        'Part_Time_Job': [part_time],
-        'Scholarship': [scholarship],
-        'Stress_Index': [stress],
-        'GPA': [gpa],
-        'Semester': [semester],
+        'Internet_Access':        [internet],
+        'Study_Hours_per_Day':    [study_hours],
+        'Attendance_Rate':        [attendance],
+        'Assignment_Delay_Days':  [float(assignment_delay)],
+        'Travel_Time_Minutes':    [float(travel_time)],
+        'Part_Time_Job':          [part_time],
+        'Scholarship':            [scholarship],
+        'Stress_Index':           [stress],
+        'GPA':                    [gpa],
+        'Semester':               [semester],
     })
 
-    prediction = model.predict(input_df)[0]
+    prediction    = model.predict(input_df)[0]
     probabilities = model.predict_proba(input_df)[0]
-    dropout_prob = probabilities[1]
-    safe_prob = probabilities[0]
+    drop_pct      = probabilities[1]
+    safe_pct      = probabilities[0]
 
-    st.markdown('<p class="section-title">Prediction Result</p>', unsafe_allow_html=True)
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+    st.markdown('<div class="sec-label">Result</div>', unsafe_allow_html=True)
 
-    res_left, res_right = st.columns([5, 5])
+    res_l, res_r = st.columns([5, 7])
 
-    with res_left:
+    with res_l:
         if prediction == 1:
+            gauge_color = "#a0452e"
             st.markdown(f"""
-            <div class="result-dropout">
-                <div class="result-title">⚠ At Risk of Dropout</div>
-                <div class="result-prob">{dropout_prob:.1%}</div>
-                <div class="result-desc">Dropout probability — immediate intervention recommended</div>
+            <div class="result-box risk">
+                <div class="res-label">Dropout Probability</div>
+                <div class="res-pct">{drop_pct:.1%}</div>
+                <div class="res-verdict">At Risk of Dropout</div>
+                <div class="res-note">Immediate intervention is recommended for this student.</div>
+                <div class="gauge-wrap">
+                    <div class="gauge-top"><span>Low</span><span>High</span></div>
+                    <div class="gauge-track">
+                        <div class="gauge-fill" style="width:{drop_pct*100:.1f}%; background:{gauge_color};"></div>
+                        <div class="gauge-dot" style="left:{drop_pct*100:.1f}%; background:{gauge_color};"></div>
+                    </div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
         else:
+            gauge_color = "#3d6650"
             st.markdown(f"""
-            <div class="result-safe">
-                <div class="result-title">✓ Not at Risk</div>
-                <div class="result-prob">{safe_prob:.1%}</div>
-                <div class="result-desc">Safe probability — student appears on track</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-        # Risk gauge
-        needle_pos = int(dropout_prob * 100)
-        st.markdown(f"""
-        <div class="gauge-wrap" style="margin-top:1.2rem;">
-            <div style="font-family:'Lora',serif; font-style:italic; font-size:0.82rem; color:var(--ink-soft); margin-bottom:0.3rem;">Risk Gauge</div>
-            <div class="gauge-track">
-                <div class="gauge-needle" style="left:{needle_pos}%;"></div>
-            </div>
-            <div class="gauge-labels"><span>Low Risk</span><span>Moderate</span><span>High Risk</span></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with res_right:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.markdown("""
-        <p style="font-family:'Playfair Display',serif; font-size:1rem; font-weight:600; font-style:italic; margin-bottom:1rem; color:var(--ink);">
-            Key Contributing Factors
-        </p>
-        """, unsafe_allow_html=True)
-
-        # Normalized factor contributions
-        factors = [
-            ("GPA", max(0, 1 - gpa / 4), "#71713B"),
-            ("Attendance", max(0, 1 - attendance / 100), "#71713B"),
-            ("Stress Index", stress / 10, "#b85c42"),
-            ("Study Hours", max(0, 1 - study_hours / 10), "#71713B"),
-            ("Assignment Delay", assignment_delay / 15, "#b85c42"),
-            ("Part-Time Job", 1.0 if part_time == "Yes" else 0.0, "#94A5B3"),
-            ("No Internet", 1.0 if internet == "No" else 0.0, "#94A5B3"),
-            ("No Scholarship", 1.0 if scholarship == "No" else 0.15, "#94A5B3"),
-        ]
-
-        for name, score, color in sorted(factors, key=lambda x: x[1], reverse=True):
-            bar_w = int(score * 100)
-            st.markdown(f"""
-            <div class="feat-row">
-                <span class="feat-name">{name}</span>
-                <div class="feat-bar-wrap">
-                    <div class="feat-bar" style="width:{bar_w}%; background:{color};"></div>
+            <div class="result-box safe">
+                <div class="res-label">Safe Probability</div>
+                <div class="res-pct">{safe_pct:.1%}</div>
+                <div class="res-verdict">Not at Risk</div>
+                <div class="res-note">Student appears on track. Continue regular monitoring.</div>
+                <div class="gauge-wrap">
+                    <div class="gauge-top"><span>Low</span><span>High</span></div>
+                    <div class="gauge-track">
+                        <div class="gauge-fill" style="width:{safe_pct*100:.1f}%; background:{gauge_color};"></div>
+                        <div class="gauge-dot" style="left:{safe_pct*100:.1f}%; background:{gauge_color};"></div>
+                    </div>
                 </div>
-                <span class="feat-val">{score:.0%}</span>
             </div>
             """, unsafe_allow_html=True)
 
-        st.markdown('</div>', unsafe_allow_html=True)
+    with res_r:
+        st.markdown('<div class="sec-label">Contributing Factors</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="gap-lg"></div>', unsafe_allow_html=True)
+        factors = [
+            ("Low GPA",            max(0.0, 1 - gpa / 4)),
+            ("Low Attendance",     max(0.0, 1 - attendance / 100)),
+            ("High Stress",        stress / 10),
+            ("Low Study Hours",    max(0.0, 1 - study_hours / 10)),
+            ("Assignment Delay",   assignment_delay / 15),
+            ("Part-Time Job",      1.0 if part_time == "Yes" else 0.0),
+            ("No Internet",        1.0 if internet == "No" else 0.0),
+            ("No Scholarship",     0.9 if scholarship == "No" else 0.0),
+        ]
+        factors_sorted = sorted(factors, key=lambda x: x[1], reverse=True)
 
-    # ── Recommendations ──────────────────────────────────────────────────────
-    st.markdown('<p class="section-title">Intervention Recommendations</p>', unsafe_allow_html=True)
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
+        rows_html = ""
+        for name, score in factors_sorted:
+            bar_color = "#a0452e" if score > 0.6 else "#71713B" if score > 0.3 else "#94A5B3"
+            rows_html += f"""
+            <div class="factor-row">
+                <span class="factor-name">{name}</span>
+                <div class="factor-bar-bg">
+                    <div class="factor-bar-fill" style="width:{score*100:.0f}%; background:{bar_color};"></div>
+                </div>
+                <span class="factor-pct">{score:.0%}</span>
+            </div>"""
 
+        st.markdown(f'<div>{rows_html}</div>', unsafe_allow_html=True)
+
+    st.markdown('<div class="sp-lg"></div>', unsafe_allow_html=True)
+
+    # ── RECOMMENDATIONS ───────────────────────────────────────────────────────
     recs = []
     if attendance < 70:
-        recs.append(("📅 Attendance Alert", "Attendance is critically low. Consider counseling and attendance monitoring programs."))
+        recs.append(("Attendance Alert",
+                     "Attendance is critically low. Counseling and attendance monitoring are advised."))
     if gpa < 2.5:
-        recs.append(("📖 Academic Support", "GPA is below threshold. Tutoring and academic mentoring are strongly advised."))
+        recs.append(("Academic Support",
+                     "GPA is below threshold. Tutoring and academic mentoring are strongly recommended."))
     if stress > 7:
-        recs.append(("🧘 Stress Management", "High stress levels detected. Refer to campus mental health services."))
+        recs.append(("Stress Management",
+                     "High stress levels detected. Refer to campus mental health services."))
     if study_hours < 2:
-        recs.append(("⏰ Study Planning", "Very low study hours. Time management coaching may help."))
+        recs.append(("Study Planning",
+                     "Very low study hours. Time management coaching may help."))
     if assignment_delay > 5:
-        recs.append(("✏️ Assignment Tracking", "Frequent delays in assignment submission. A structured deadline tracker is recommended."))
+        recs.append(("Assignment Tracking",
+                     "Frequent late submissions. A structured deadline tracker is recommended."))
     if part_time == "Yes" and scholarship == "No":
-        recs.append(("💰 Financial Aid", "Student is working part-time without a scholarship. Explore financial aid opportunities."))
+        recs.append(("Financial Aid",
+                     "Student works part-time without scholarship. Explore financial aid options."))
     if internet == "No":
-        recs.append(("🌐 Digital Access", "No internet access may hinder learning. Explore campus connectivity programs."))
-
+        recs.append(("Digital Access",
+                     "No internet access may hinder learning. Explore campus connectivity programs."))
     if not recs:
-        recs.append(("✓ No Critical Issues", "The student profile looks healthy. Continue regular monitoring."))
+        recs.append(("No Critical Issues",
+                     "The student profile looks healthy. Continue regular monitoring."))
 
-    rec_cols = st.columns(min(len(recs), 3))
+    st.markdown('<div class="sec-label">Recommendations</div>', unsafe_allow_html=True)
+    rec_cols = st.columns(3)
+    card_class = "alert" if prediction == 1 else "ok"
     for i, (title, desc) in enumerate(recs):
         with rec_cols[i % 3]:
-            bg = "var(--warn-light)" if prediction == 1 else "#eef3f0"
-            border = "var(--warn-red)" if prediction == 1 else "#4a8060"
             st.markdown(f"""
-            <div style="background:{bg}; border-left:3px solid {border}; border-radius:8px;
-                        padding:1.1rem 1.2rem; margin-bottom:0.8rem;">
-                <div style="font-family:'DM Sans',sans-serif; font-weight:500; font-size:0.88rem;
-                            color:var(--ink); margin-bottom:0.35rem;">{title}</div>
-                <div style="font-family:'Lora',serif; font-style:italic; font-size:0.82rem;
-                            color:var(--ink-soft); line-height:1.6;">{desc}</div>
+            <div class="rec-card {card_class}">
+                <div class="rec-title">{title}</div>
+                <div class="rec-desc">{desc}</div>
             </div>
             """, unsafe_allow_html=True)
 
-    st.markdown('<div class="gap-lg"></div>', unsafe_allow_html=True)
+    st.markdown('<div class="sp-lg"></div>', unsafe_allow_html=True)
 
-# ── About section ─────────────────────────────────────────────────────────────
-st.markdown('<p class="section-title">About This Model</p>', unsafe_allow_html=True)
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
+# ── ABOUT ─────────────────────────────────────────────────────────────────────
+st.markdown('<div class="sec-label">About</div>', unsafe_allow_html=True)
 
 ab1, ab2, ab3 = st.columns(3)
 
 with ab1:
     st.markdown("""
-    <div class="about-card">
-        <h3>Algorithm</h3>
-        <p>
-            <strong>Logistic Regression</strong> with SMOTE oversampling to handle class imbalance.
-            The model was selected based on superior Recall — critical for catching at-risk students
-            before they drop out.
-        </p>
+    <div class="about-block">
+        <h4>Algorithm</h4>
+        <p>Logistic Regression with manual oversampling to handle class imbalance.
+        Selected for its superior Recall — critical for identifying at-risk students before they drop out.</p>
     </div>
     """, unsafe_allow_html=True)
 
 with ab2:
     st.markdown("""
-    <div class="about-card">
-        <h3>Features Used</h3>
+    <div class="about-block">
+        <h4>Features</h4>
         <ul>
+            <li>GPA &amp; Attendance Rate</li>
             <li>Study Hours per Day</li>
-            <li>Attendance Rate</li>
-            <li>GPA</li>
             <li>Stress Index</li>
             <li>Assignment Delay Days</li>
             <li>Travel Time to Campus</li>
@@ -790,21 +671,18 @@ with ab2:
 
 with ab3:
     st.markdown("""
-    <div class="about-card">
-        <h3>Why Recall Matters</h3>
-        <p>
-            In dropout prediction, <em>missing an at-risk student</em> (False Negative) is
-            far more costly than a false alarm. This model prioritises <strong>Recall</strong>
-            to ensure maximum detection of students who need intervention.
-        </p>
+    <div class="about-block">
+        <h4>Why Recall Matters</h4>
+        <p>Missing an at-risk student (False Negative) is far more costly than a false alarm.
+        This model prioritises Recall to maximise detection of students who need intervention.</p>
     </div>
     """, unsafe_allow_html=True)
 
-st.markdown('</div>', unsafe_allow_html=True)  # close main-wrap
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ── Footer ─────────────────────────────────────────────────────────────────────
+# ── FOOTER ────────────────────────────────────────────────────────────────────
 st.markdown("""
-<div class="footer">
-    <p>Student Dropout Predictor · Logistic Regression · Built with Streamlit</p>
+<div class="ftr">
+    Student Dropout Predictor &nbsp;&middot;&nbsp; Logistic Regression &nbsp;&middot;&nbsp; Streamlit
 </div>
 """, unsafe_allow_html=True)
