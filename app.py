@@ -229,37 +229,21 @@ div[data-testid="stRadio"] > label {
     color: var(--ink-light) !important;
 }
 
-/* RADIO - horizontal SEJAJAR SEMPURNA */
+/* RADIO - paksa vertikal */
 div[data-testid="stRadio"] {
     display: flex !important;
-    flex-direction: row !important;
-    gap: 2rem !important;
-    align-items: center !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
 }
+
 div[data-testid="stRadio"] > label {
-    display: inline-flex !important;
+    display: flex !important;
     align-items: center !important;
-    gap: 0.4rem !important;
+    gap: 0.5rem !important;
 }
-[data-baseweb="radio"] {
-    display: inline-flex !important;
-    align-items: center !important;
-}
-[data-baseweb="radio"] [data-state="checked"] div,
-[data-baseweb="radio"] div[class*="radioInner"] {
-    background: var(--accent) !important;
-}
-[data-baseweb="radio"] label span:first-child {
-    border-color: var(--accent) !important;
-}
-div[data-testid="stRadio"] [data-baseweb="radio"] label {
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.85rem !important;
-    color: var(--ink) !important;
-}
-/* Hilangkan vertical stacking */
+
 .row-widget.stRadio {
-    flex-direction: row !important;
+    flex-direction: column !important;
 }
 
 /* SELECTBOX */
@@ -491,9 +475,9 @@ with R:
     stress      = st.slider("Stress Index (1–10)", 1.0, 10.0, 5.0, 0.1)
     travel_time = st.slider("Travel Time to Campus (min)", 0, 120, 30)
     st.markdown('<div class="s1"></div>', unsafe_allow_html=True)
-    internet    = st.radio("Internet Access",  ["Yes","No"], horizontal=True)
-    part_time   = st.radio("Part-Time Job",    ["Yes","No"], horizontal=True)
-    scholarship = st.radio("Scholarship",      ["Yes","No"], horizontal=True)
+    internet    = st.radio("Internet Access",  ["Yes","No"])
+    part_time   = st.radio("Part-Time Job",    ["Yes","No"])
+    scholarship = st.radio("Scholarship",      ["Yes","No"])
 
 st.markdown('<div class="s2"></div>', unsafe_allow_html=True)
 _, btn_col, _ = st.columns([6, 6, 6])
