@@ -135,7 +135,7 @@ section[data-testid="stSidebar"] { display: none; }
 .hdr {
     background: var(--cream);
     border-bottom: 1px solid var(--line);
-    padding: 2.8rem 5vw 2.4rem;
+    padding: 2.8rem clamp(2rem, 8vw, 7rem) 2.4rem;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
@@ -194,7 +194,7 @@ section[data-testid="stSidebar"] { display: none; }
 
 /* ── BODY ── */
 .body {
-    padding: 3rem 5vw 5rem;
+    padding: 3rem clamp(2rem, 8vw, 7rem) 5rem;
     max-width: 1320px;
     margin: 0 auto;
 }
@@ -433,7 +433,7 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
 /* ── FOOTER ── */
 .ftr {
     border-top: 1px solid var(--line);
-    padding: 1.4rem 5vw;
+    padding: 1.4rem clamp(2rem, 8vw, 7rem);
     font-size: 0.72rem;
     color: var(--muted);
     letter-spacing: 0.08em;
@@ -600,31 +600,67 @@ if predict_clicked:
     st.markdown('<div class="sp-lg"></div>', unsafe_allow_html=True)
 
     # ── RECOMMENDATIONS ───────────────────────────────────────────────────────
+    # Score each factor
+    factor_scores = {
+        "attendance":   max(0.0, 1 - attendance / 100),
+        "gpa":          max(0.0, 1 - gpa / 4),
+        "stress":       stress / 10,
+        "study_hours":  max(0.0, 1 - study_hours / 10),
+        "delay":        assignment_delay / 15,
+        "part_job":     1.0 if part_time == "Yes" else 0.0,
+        "internet":     1.0 if internet == "No" else 0.0,
+        "scholarship":  0.9 if scholarship == "No" else 0.0,
+    }
+
     recs = []
-    if attendance < 70:
-        recs.append(("Attendance Alert",
-                     "Attendance is critically low. Counseling and attendance monitoring are advised."))
-    if gpa < 2.5:
-        recs.append(("Academic Support",
-                     "GPA is below threshold. Tutoring and academic mentoring are strongly recommended."))
-    if stress > 7:
+    if attendance < 80:
+        recs.append(("Attendance",
+                     f"Attendance at {attendance:.0f}% is below the recommended threshold. "
+                     "Regular check-ins and attendance monitoring are advised."))
+    if gpa < 3.0:
+        recs.append(("Academic Performance",
+                     f"GPA of {gpa:.2f} signals academic difficulty. "
+                     "Tutoring and academic mentoring are recommended."))
+    if stress > 6:
         recs.append(("Stress Management",
-                     "High stress levels detected. Refer to campus mental health services."))
-    if study_hours < 2:
-        recs.append(("Study Planning",
-                     "Very low study hours. Time management coaching may help."))
-    if assignment_delay > 5:
-        recs.append(("Assignment Tracking",
-                     "Frequent late submissions. A structured deadline tracker is recommended."))
+                     f"Stress index at {stress:.1f}/10 is elevated. "
+                     "Refer to campus mental health or counseling services."))
+    if study_hours < 4:
+        recs.append(("Study Hours",
+                     f"Only {study_hours:.1f} hours of study per day. "
+                     "Time management coaching and a structured study plan may help."))
+    if assignment_delay > 3:
+        recs.append(("Assignment Submission",
+                     f"Assignments delayed by {assignment_delay} days on average. "
+                     "A structured deadline tracker is recommended."))
     if part_time == "Yes" and scholarship == "No":
         recs.append(("Financial Aid",
-                     "Student works part-time without scholarship. Explore financial aid options."))
+                     "Student works part-time without a scholarship. "
+                     "Explore financial aid and bursary options to reduce work burden."))
     if internet == "No":
         recs.append(("Digital Access",
-                     "No internet access may hinder learning. Explore campus connectivity programs."))
+                     "No internet access may hinder coursework. "
+                     "Explore campus Wi-Fi programmes or device lending schemes."))
+
+    # If model predicts dropout but no threshold triggered, surface top contributing factors
+    if prediction == 1 and not recs:
+        label_map = {
+            "attendance": ("Attendance",       "Attendance rate is a contributing risk factor. Closer monitoring is advised."),
+            "gpa":        ("Academic Performance", "GPA is a contributing risk factor. Academic support is recommended."),
+            "stress":     ("Stress Levels",    "Stress is a contributing risk factor. Mental health support is advised."),
+            "study_hours":("Study Hours",      "Low study hours are a contributing risk factor. A structured study plan may help."),
+            "delay":      ("Assignment Delays","Assignment delays contribute to dropout risk. Deadline tracking is recommended."),
+            "part_job":   ("Part-Time Work",   "Part-time employment increases dropout risk. Consider workload balance."),
+            "internet":   ("Digital Access",   "Limited internet access contributes to dropout risk."),
+            "scholarship":("Financial Pressure","Lack of scholarship increases financial stress. Explore aid options."),
+        }
+        top3 = sorted(factor_scores.items(), key=lambda x: x[1], reverse=True)[:3]
+        for key, _ in top3:
+            recs.append(label_map[key])
+
     if not recs:
-        recs.append(("No Critical Issues",
-                     "The student profile looks healthy. Continue regular monitoring."))
+        recs.append(("No Concerns Detected",
+                     "All indicators are within healthy ranges. Continue regular monitoring."))
 
     st.markdown('<div class="sec-label">Recommendations</div>', unsafe_allow_html=True)
     rec_cols = st.columns(3)
