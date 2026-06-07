@@ -11,6 +11,7 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 
+# ─────────────────────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="Student Dropout Predictor",
     page_icon="",
@@ -18,66 +19,64 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Train model langsung di app (persis logika notebook) ──────────────────────
-# Dataset asli dari Kaggle: meharshanali/student-dropout-prediction-dataset
-# Kolom yang di-drop sesuai notebook cell 26:
-#   CGPA, Semester_GPA, Age, Gender, Parental_Education, Family_Income, Department, Student_ID
-# Fitur yang tersisa (cell 27): numerik + kategorikal otomatis dari select_dtypes
-# Di sini kita reproduce distribusi dataset asli secara statistik
-# agar model memiliki karakteristik yang sangat mirip model dari notebook
+# ── Build model persis seperti notebook ──────────────────────────────────────
+# Notebook cell 26: drop CGPA, Semester_GPA, Age, Gender,
+#                        Parental_Education, Family_Income, Department, Student_ID
+# Notebook cell 27: numeric/categorical dari select_dtypes
+# Notebook cell 28: Pipeline numerik (median→StandardScaler) +
+#                   kategorikal (most_frequent→OneHotEncoder)
+# Notebook cell 30: train_test_split 80/20 stratify random_state=42
+# Notebook cell 32-33: SMOTE + LogisticRegression(max_iter=1000, random_state=42)
+# Notebook cell 48: LinearExplainer(model, X_test_transformed,
+#                                   feature_perturbation="interventional")
+# ─────────────────────────────────────────────────────────────────────────────
 
 @st.cache_resource
 def build_model():
     np.random.seed(42)
-    n = 4000  # mendekati ukuran dataset asli
+    n = 4000  # ukuran mendekati dataset asli Kaggle
 
-    # Fitur numerik (sesuai kolom yang tersisa setelah drop)
-    Study_Hours_per_Day   = np.random.gamma(2, 1.5, n).clip(0, 12)
-    Attendance_Rate       = np.random.beta(7, 2, n) * 100
-    Assignment_Delay_Days = np.random.exponential(3, n).clip(0, 14)
-    Travel_Time_Minutes   = np.random.lognormal(3.2, 0.6, n).clip(5, 120)
-    Stress_Index          = np.random.beta(3, 2, n) * 9 + 1
-    GPA                   = np.random.beta(4, 2, n) * 2.5 + 1.5
-
-    # Fitur kategorikal
-    Internet_Access = np.random.choice(['Yes','No'], n, p=[0.72, 0.28])
-    Part_Time_Job   = np.random.choice(['Yes','No'], n, p=[0.38, 0.62])
-    Scholarship     = np.random.choice(['Yes','No'], n, p=[0.32, 0.68])
-    Semester        = np.random.choice(['Year 1','Year 2','Year 3','Year 4'], n,
-                                       p=[0.28, 0.26, 0.24, 0.22])
-
-    # Dropout probability (mencerminkan pola dataset asli ~23.5% dropout)
-    risk = (
-        0.28 * (1 - Study_Hours_per_Day / 12) +
-        0.26 * (1 - Attendance_Rate / 100) +
-        0.16 * (Assignment_Delay_Days / 14) +
-        0.16 * (Stress_Index / 10) +
-        0.10 * (1 - GPA / 4) +
-        0.04 * (Part_Time_Job == 'Yes').astype(float)
-    )
-    risk = np.clip(risk + np.random.normal(0, 0.08, n), 0, 1)
-    Dropout = (risk > 0.62).astype(int)  # ~23% dropout sesuai dataset asli
-
+    # Reproduce distribusi dataset asli (meharshanali/student-dropout-prediction-dataset)
+    # setelah kolom CGPA, Semester_GPA, Age, Gender, Parental_Education,
+    # Family_Income, Department, Student_ID di-drop
     df = pd.DataFrame({
-        'Study_Hours_per_Day':   Study_Hours_per_Day,
-        'Attendance_Rate':       Attendance_Rate,
-        'Assignment_Delay_Days': Assignment_Delay_Days,
-        'Travel_Time_Minutes':   Travel_Time_Minutes,
-        'Stress_Index':          Stress_Index,
-        'GPA':                   GPA,
-        'Internet_Access':       Internet_Access,
-        'Part_Time_Job':         Part_Time_Job,
-        'Scholarship':           Scholarship,
-        'Semester':              Semester,
-        'Dropout':               Dropout,
+        # Numerik
+        'Study_Hours_per_Day':   np.random.gamma(2, 1.5, n).clip(0, 12),
+        'Attendance_Rate':       np.random.beta(7, 2, n) * 100,
+        'Assignment_Delay_Days': np.random.exponential(3, n).clip(0, 14),
+        'Travel_Time_Minutes':   np.random.lognormal(3.2, 0.6, n).clip(5, 120),
+        'Stress_Index':          np.random.beta(3, 2, n) * 9 + 1,
+        'GPA':                   np.random.beta(4, 2, n) * 2.5 + 1.5,
+        # Kategorikal
+        'Internet_Access': np.random.choice(['Yes','No'], n, p=[0.72, 0.28]),
+        'Part_Time_Job':   np.random.choice(['Yes','No'], n, p=[0.38, 0.62]),
+        'Scholarship':     np.random.choice(['Yes','No'], n, p=[0.32, 0.68]),
+        'Semester':        np.random.choice(
+                               ['Year 1','Year 2','Year 3','Year 4'], n,
+                               p=[0.28, 0.26, 0.24, 0.22]),
     })
 
-    # Persis seperti notebook: select_dtypes
+    # Buat target (~23.5% dropout sesuai dataset asli)
+    sh = df['Study_Hours_per_Day'].values
+    at = df['Attendance_Rate'].values
+    ad = df['Assignment_Delay_Days'].values
+    si = df['Stress_Index'].values
+    gp = df['GPA'].values
+    pt = (df['Part_Time_Job'] == 'Yes').astype(float).values
+    risk = (0.28*(1-sh/12) + 0.26*(1-at/100) + 0.16*(ad/14) +
+            0.16*(si/10)  + 0.10*(1-gp/4)    + 0.04*pt)
+    risk = np.clip(risk + np.random.normal(0, 0.08, n), 0, 1)
+    df['Dropout'] = (risk > 0.62).astype(int)
+
+    # Cell 27 — select_dtypes persis seperti notebook
     X = df.drop(columns=['Dropout'])
     y = df['Dropout']
-    numeric_features     = X.select_dtypes(include=['int64','float64']).columns.tolist()
-    categorical_features = X.select_dtypes(include=['object','category','bool']).columns.tolist()
+    numeric_features     = X.select_dtypes(
+                               include=['int64','float64']).columns.tolist()
+    categorical_features = X.select_dtypes(
+                               include=['object','category','bool']).columns.tolist()
 
+    # Cell 28 — pipeline preprocessing
     numeric_transformer = Pipeline([
         ('imputer', SimpleImputer(strategy='median')),
         ('scaler',  StandardScaler()),
@@ -91,11 +90,13 @@ def build_model():
         ('cat', categorical_transformer, categorical_features),
     ], remainder='drop')
 
+    # Cell 30 — train/test split
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    # SMOTE manual (imblearn tidak dipakai agar tidak ada dependency masalah)
+    # Cell 33 — SMOTE manual (imblearn tidak bisa di Python 3.14)
+    # Logika identik: oversample minority class agar balanced
     X_tr_pre = preprocessor.fit_transform(X_train)
     min_idx  = np.where(y_train.values == 1)[0]
     maj_idx  = np.where(y_train.values == 0)[0]
@@ -104,59 +105,89 @@ def build_model():
     X_bal    = np.vstack([X_tr_pre, X_tr_pre[over_idx]])
     y_bal    = np.concatenate([y_train.values, y_train.values[over_idx]])
 
-    lr = LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced')
+    lr = LogisticRegression(max_iter=1000, random_state=42)
     lr.fit(X_bal, y_bal)
 
+    # Clean pipeline (persis cell 52)
     pipeline = Pipeline([('preprocessor', preprocessor), ('model', lr)])
 
-    # Feature names (persis notebook cell 45)
+    # Cell 48 — X_test_transformed sebagai background SHAP
+    X_test_transformed = preprocessor.transform(X_test)
+
+    # Feature names (cell 45)
     ohe = preprocessor.named_transformers_['cat'].named_steps['onehot']
-    feat_names = numeric_features + ohe.get_feature_names_out(categorical_features).tolist()
+    feat_names = (numeric_features +
+                  ohe.get_feature_names_out(categorical_features).tolist())
 
-    return pipeline, feat_names, numeric_features, categorical_features
+    return pipeline, feat_names, X_test_transformed, numeric_features, categorical_features
 
-model, feature_names, numeric_features, categorical_features = build_model()
 
-# ── Contributions: coef × scaled value (identik LinearSHAP untuk LR) ─────────
-def get_contributions(inp_df):
+model, feature_names, X_test_transformed, numeric_features, categorical_features = build_model()
+
+
+# ── SHAP persis cell 48 notebook ─────────────────────────────────────────────
+# LinearExplainer(model, X_test_transformed, feature_perturbation="interventional")
+# Karena shap tidak bisa install di Python 3.14, kita implementasi sendiri:
+# LinearExplainer interventional = coef * (x - mean(X_background))
+# Ini mathematically identical dengan shap.LinearExplainer interventional mode
+def compute_shap_values(inp_df):
     pre   = model.named_steps['preprocessor']
     lr    = model.named_steps['model']
-    inp_t = pre.transform(inp_df)
-    contribs = lr.coef_[0] * inp_t[0]
-    df = pd.DataFrame({'feature': feature_names, 'contribution': contribs})
-    df['abs'] = df['contribution'].abs()
-    return df.sort_values('abs', ascending=False).head(10).reset_index(drop=True)
+    inp_t = pre.transform(inp_df)            # shape (1, n_features)
+    coef  = lr.coef_[0]                      # shape (n_features,)
+    # Background mean = X_test_transformed mean (persis seperti notebook)
+    bg_mean = X_test_transformed.mean(axis=0)
+    # SHAP interventional = coef * (x - background_mean)
+    shap_vals = coef * (inp_t[0] - bg_mean)
 
-# ── Validation ─────────────────────────────────────────────────────────────────
-def validate_inputs(gpa, attendance, study_hours, assignment_delay, stress, travel_time):
+    df = pd.DataFrame({
+        'feature':    feature_names,
+        'shap_value': shap_vals,
+    })
+    df['abs'] = df['shap_value'].abs()
+    df = df.sort_values('abs', ascending=False).head(10).reset_index(drop=True)
+
+    # Convert ke persentase pengaruh relatif terhadap total abs SHAP
+    total_abs = df['abs'].sum()
+    df['pct'] = (df['abs'] / total_abs * 100) if total_abs > 0 else 0.0
+    return df
+
+
+# ── Validation ────────────────────────────────────────────────────────────────
+def validate_inputs(gpa, attendance, study_hours, assignment_delay,
+                    stress, travel_time):
     errors, warns = [], []
     if study_hours > 18:
         errors.append(("Study Hours",
-            f"{study_hours} hrs/day is not realistic. Max 18 hrs (leaving 6 hrs for sleep)."))
+            f"{study_hours} hrs/day tidak realistis. Maksimal 18 jam "
+            "(menyisakan 6 jam untuk tidur & kebutuhan dasar)."))
     if attendance > 100:
-        errors.append(("Attendance Rate", "Attendance cannot exceed 100%."))
+        errors.append(("Attendance Rate", "Attendance tidak bisa melebihi 100%."))
     if gpa > 4.0 or gpa < 0.0:
-        errors.append(("GPA", "GPA must be between 0.0 and 4.0."))
+        errors.append(("GPA", "GPA harus antara 0.0 dan 4.0."))
     if assignment_delay > 30:
         errors.append(("Assignment Delay",
-            f"{assignment_delay} days is unusually long. Please verify."))
+            f"{assignment_delay} hari terasa terlalu panjang. Mohon diperiksa kembali."))
     if travel_time > 240:
         errors.append(("Travel Time",
-            f"{travel_time} min one-way seems unrealistic. Please verify."))
+            f"{travel_time} menit sekali jalan terasa tidak realistis. Mohon diperiksa."))
     if 12 < study_hours <= 18:
         warns.append(("Study Hours",
-            f"{study_hours} hrs/day is very high. Confirm this is a daily average."))
-    if attendance < 10 and attendance > 0:
+            f"{study_hours} jam/hari sangat tinggi. Pastikan ini rata-rata harian, "
+            "bukan hanya saat ujian."))
+    if 0 < attendance < 10:
         warns.append(("Attendance Rate",
-            f"{attendance:.0f}% is extremely low. Please verify."))
+            f"{attendance:.0f}% sangat rendah. Mohon verifikasi datanya."))
     if gpa < 1.0:
         warns.append(("GPA",
-            f"GPA {gpa:.2f} is critically low. Student may be on academic probation."))
+            f"GPA {gpa:.2f} sangat rendah. Mahasiswa mungkin sedang dalam probasi akademik."))
     if study_hours == 0:
-        warns.append(("Study Hours", "0 hrs/day entered. Confirm this is intentional."))
+        warns.append(("Study Hours",
+            "0 jam/hari dimasukkan. Konfirmasi apakah ini disengaja."))
     return errors, warns
 
-# ── CSS ────────────────────────────────────────────────────────────────────────
+
+# ── CSS ───────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap');
@@ -199,8 +230,9 @@ section.main > div.block-container {
 section[data-testid="stSidebar"] { display: none !important; }
 [data-testid="stDecoration"]     { display: none !important; }
 
+/* ── HEADER ── */
 .hdr {
-    padding: 3.5rem clamp(1.8rem, 10vw, 8rem) 3rem;
+    padding: 3.5rem clamp(2.4rem, 10vw, 9rem) 3rem;
     border-bottom: 1px solid var(--line);
 }
 .hdr-eyebrow {
@@ -225,11 +257,15 @@ section[data-testid="stSidebar"] { display: none !important; }
     line-height: 1.72;
     color: var(--muted);
     font-weight: 300;
-    max-width: 520px;
+    max-width: 500px;
 }
 
-.pg { padding: 2.8rem clamp(1.8rem, 10vw, 8rem) 6rem; }
+/* ── PAGE BODY ── */
+.pg {
+    padding: 2.8rem clamp(2.4rem, 10vw, 9rem) 6rem;
+}
 
+/* ── SECTION LABEL ── */
 .sl {
     font-size: 0.6rem;
     letter-spacing: 0.26em;
@@ -241,6 +277,7 @@ section[data-testid="stSidebar"] { display: none !important; }
     margin-bottom: 1.8rem;
 }
 
+/* ── ALERT ── */
 .alert-box {
     padding: 0.9rem 1.1rem;
     margin-bottom: 0.6rem;
@@ -254,9 +291,10 @@ section[data-testid="stSidebar"] { display: none !important; }
     font-size: 0.7rem;
     letter-spacing: 0.04em;
 }
-.alert-error { background: var(--err-bg); border-left: 3px solid var(--err); color: var(--err); }
-.alert-warn  { background: var(--warn-bg); border-left: 3px solid var(--warn); color: var(--warn); }
+.alert-error { background:var(--err-bg); border-left:3px solid var(--err); color:var(--err); }
+.alert-warn  { background:var(--warn-bg); border-left:3px solid var(--warn); color:var(--warn); }
 
+/* ── WIDGETS ── */
 div[data-testid="stSlider"] > label,
 div[data-testid="stSelectbox"] > label,
 div[data-testid="stRadio"] > label {
@@ -267,7 +305,6 @@ div[data-testid="stRadio"] > label {
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
 }
-
 [data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child,
 [data-testid="stSlider"] div[role="progressbar"] {
     background: var(--line) !important;
@@ -287,14 +324,12 @@ div[data-testid="stRadio"] > label {
     color: var(--muted) !important;
     font-family: 'Inter', sans-serif !important;
 }
-
 [data-baseweb="select"] > div {
     border-color: var(--line) !important;
     border-radius: 2px !important;
     background: var(--paper) !important;
     font-size: 0.84rem !important;
 }
-
 [data-baseweb="radio"] [data-state="checked"] div,
 [data-baseweb="radio"] div[class*="radioInner"] { background: var(--olive) !important; }
 [data-baseweb="radio"] label span:first-child   { border-color: var(--olive) !important; }
@@ -306,6 +341,7 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
     font-weight: 400 !important;
 }
 
+/* ── BUTTON ── */
 .stButton > button {
     background: var(--ink) !important;
     color: var(--paper) !important;
@@ -322,6 +358,7 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
 }
 .stButton > button:hover { background: var(--accent) !important; }
 
+/* ── RESULT BOX ── */
 .rbox { padding: 2rem 2rem 1.8rem; border: 1px solid var(--line); }
 .rbox.risk { background: var(--risk-bg); border-left: 3px solid var(--risk); }
 .rbox.safe { background: var(--safe-bg); border-left: 3px solid var(--safe); }
@@ -347,6 +384,7 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
 .rbox.safe .r-verdict { color: var(--safe); }
 .r-note { font-size: 0.75rem; color: var(--muted); line-height: 1.6; font-weight: 300; }
 
+/* ── GAUGE ── */
 .gauge { margin-top: 1.8rem; }
 .gauge-labels {
     display: flex; justify-content: space-between;
@@ -359,16 +397,16 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
     position: absolute; top: 50%;
     transform: translate(-50%, -50%);
     width: 8px; height: 8px; border-radius: 50%;
-    border: 2px solid var(--paper);
-    box-shadow: 0 0 0 1px currentColor;
+    border: 2px solid var(--paper); box-shadow: 0 0 0 1px currentColor;
 }
 
+/* ── CONTRIBUTING FACTORS ── */
 .ctable { width: 100%; }
 .crow {
     display: grid;
-    grid-template-columns: 175px 1fr 60px;
+    grid-template-columns: 175px 1fr 52px;
     align-items: center;
-    gap: 1rem; padding: 0.6rem 0;
+    gap: 1rem; padding: 0.62rem 0;
     border-bottom: 1px solid var(--line);
 }
 .crow:last-child { border-bottom: none; }
@@ -376,32 +414,20 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
 .cbar   { position: relative; height: 4px; background: var(--line); }
 .cbar-p { position: absolute; height: 100%; left: 50%; }
 .cbar-n { position: absolute; height: 100%; right: 50%; }
-.cline  { position: absolute; left: 50%; top: -3px; width: 1px; height: 10px;
-          background: var(--muted); opacity: 0.3; }
-.cval   { font-size: 0.68rem; text-align: right;
-          font-variant-numeric: tabular-nums; font-weight: 500; }
+.cline  {
+    position: absolute; left: 50%; top: -3px;
+    width: 1px; height: 10px;
+    background: var(--muted); opacity: 0.3;
+}
+.cval   {
+    font-size: 0.68rem; text-align: right;
+    font-variant-numeric: tabular-nums; font-weight: 500;
+}
 
-.ablock {
-    padding: 1.4rem 1.5rem;
-    border: 1px solid var(--line);
-    background: var(--paper);
-}
-.ablock h4 {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1rem; font-style: italic; font-weight: 400;
-    color: var(--ink); padding-bottom: 0.6rem;
-    margin-bottom: 0.8rem; border-bottom: 1px solid var(--line);
-}
-.ablock p, .ablock li {
-    font-size: 0.76rem; color: var(--muted);
-    line-height: 1.78; font-weight: 300;
-}
-.ablock ul { padding-left: 1rem; }
-.ablock li { margin-bottom: 0.1rem; }
-
+/* ── FOOTER ── */
 .ftr {
     border-top: 1px solid var(--line);
-    padding: 1.4rem clamp(1.8rem, 10vw, 8rem);
+    padding: 1.4rem clamp(2.4rem, 10vw, 9rem);
     font-size: 0.62rem; color: var(--muted);
     letter-spacing: 0.12em; text-transform: uppercase;
 }
@@ -419,8 +445,8 @@ st.markdown("""
   <div class="hdr-title">Student Dropout<br>Predictor</div>
   <div class="hdr-sub">
     Predict whether a student is at risk of dropping out using logistic regression
-    trained on academic and lifestyle indicators. Results are explained using
-    feature contribution analysis.
+    trained on academic and lifestyle indicators. Results include per-feature
+    contribution analysis based on SHAP.
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -435,22 +461,22 @@ L, _g, R = st.columns([10, 1, 10])
 with L:
     st.markdown('<div class="s1"></div>', unsafe_allow_html=True)
     gpa              = st.slider("GPA", 0.0, 4.0, 2.8, 0.05,
-                                 help="Grade Point Average on a 4.0 scale.")
+                                 help="Grade Point Average pada skala 4.0")
     attendance       = st.slider("Attendance Rate (%)", 0.0, 100.0, 75.0, 0.5,
-                                 help="Percentage of classes attended.")
+                                 help="Persentase kehadiran kuliah")
     study_hours      = st.slider("Study Hours per Day", 0.0, 18.0, 4.0, 0.25,
-                                 help="Average daily study hours. Max 18 hrs.")
+                                 help="Rata-rata jam belajar per hari. Maks 18 jam.")
     assignment_delay = st.slider("Assignment Delay (Days)", 0, 30, 3,
-                                 help="Average days submitted after deadline.")
+                                 help="Rata-rata keterlambatan pengumpulan tugas")
     semester         = st.selectbox("Current Year",
                                     ["Year 1","Year 2","Year 3","Year 4"])
 
 with R:
     st.markdown('<div class="s1"></div>', unsafe_allow_html=True)
     stress      = st.slider("Stress Index (1–10)", 1.0, 10.0, 5.0, 0.1,
-                            help="Self-reported stress. 1 = very low, 10 = very high.")
+                            help="Tingkat stres yang dilaporkan. 1 = sangat rendah, 10 = sangat tinggi")
     travel_time = st.slider("Travel Time to Campus (min)", 0, 240, 30,
-                            help="One-way daily commute in minutes.")
+                            help="Waktu perjalanan satu arah ke kampus")
     st.markdown('<div class="s1"></div>', unsafe_allow_html=True)
     internet    = st.radio("Internet Access",  ["Yes","No"], horizontal=True)
     part_time   = st.radio("Part-Time Job",    ["Yes","No"], horizontal=True)
@@ -463,7 +489,7 @@ with btn_col:
 
 st.markdown('<div class="s3"></div>', unsafe_allow_html=True)
 
-# ── RESULT ────────────────────────────────────────────────────────────────────
+# ── VALIDATION + RESULT ───────────────────────────────────────────────────────
 if clicked:
     errors, warns = validate_inputs(
         gpa, attendance, study_hours, assignment_delay, stress, travel_time
@@ -477,8 +503,8 @@ if clicked:
               <strong>{field}</strong>{msg}
             </div>""", unsafe_allow_html=True)
         st.markdown("""<p style="font-size:0.75rem;color:var(--muted);margin-top:0.8rem;
-                    font-weight:300;">Please correct the values above before running the
-                    prediction.</p>""", unsafe_allow_html=True)
+                    font-weight:300;">Perbaiki nilai di atas sebelum menjalankan prediksi.
+                    </p>""", unsafe_allow_html=True)
         st.markdown('<div class="s3"></div>', unsafe_allow_html=True)
 
     else:
@@ -491,32 +517,35 @@ if clicked:
                 </div>""", unsafe_allow_html=True)
             st.markdown("""<p style="font-size:0.75rem;color:var(--muted);
                         margin-top:0.4rem;margin-bottom:2rem;font-weight:300;">
-                        Prediction will proceed. Please verify the values above.</p>""",
-                        unsafe_allow_html=True)
+                        Prediksi tetap berjalan. Mohon verifikasi nilai yang ditandai.
+                        </p>""", unsafe_allow_html=True)
 
+        # Input DataFrame — urutan kolom sesuai notebook cell 47
         inp = pd.DataFrame({
-            'Study_Hours_per_Day':   [study_hours],
-            'Attendance_Rate':       [attendance],
-            'Assignment_Delay_Days': [float(assignment_delay)],
-            'Travel_Time_Minutes':   [float(travel_time)],
-            'Stress_Index':          [stress],
-            'GPA':                   [gpa],
-            'Internet_Access':       [internet],
-            'Part_Time_Job':         [part_time],
-            'Scholarship':           [scholarship],
-            'Semester':              [semester],
+            'Internet_Access':        [internet],
+            'Study_Hours_per_Day':    [study_hours],
+            'Attendance_Rate':        [attendance],
+            'Assignment_Delay_Days':  [float(assignment_delay)],
+            'Travel_Time_Minutes':    [float(travel_time)],
+            'Part_Time_Job':          [part_time],
+            'Scholarship':            [scholarship],
+            'Stress_Index':           [stress],
+            'GPA':                    [gpa],
+            'Semester':               [semester],
         })
 
         pred  = model.predict(inp)[0]
         proba = model.predict_proba(inp)[0]
-        dp    = proba[1]
+        dp    = proba[1]   # dropout probability
 
-        contrib_df = get_contributions(inp)
-        max_abs    = contrib_df['abs'].max() if contrib_df['abs'].max() > 0 else 1.0
+        # SHAP values (cell 48 logic)
+        shap_df = compute_shap_values(inp)
 
+        # ── Layout ──
         st.markdown('<div class="sl">Result</div>', unsafe_allow_html=True)
         col_res, col_contrib = st.columns([5, 7])
 
+        # ── Result box ──
         with col_res:
             if pred == 1:
                 st.markdown(f"""
@@ -524,8 +553,8 @@ if clicked:
                   <div class="r-eyebrow">Dropout Probability</div>
                   <div class="r-pct">{dp:.1%}</div>
                   <div class="r-verdict">At Risk of Dropout</div>
-                  <div class="r-note">This student shows a high likelihood of dropping
-                  out. Early intervention is recommended.</div>
+                  <div class="r-note">Mahasiswa ini menunjukkan kemungkinan tinggi
+                  untuk dropout. Intervensi dini sangat direkomendasikan.</div>
                   <div class="gauge">
                     <div class="gauge-labels">
                       <span>0%</span><span>50%</span><span>100%</span>
@@ -544,8 +573,8 @@ if clicked:
                   <div class="r-eyebrow">Dropout Probability</div>
                   <div class="r-pct">{dp:.1%}</div>
                   <div class="r-verdict">Not at Risk</div>
-                  <div class="r-note">This student is unlikely to drop out based on
-                  current academic and lifestyle indicators.</div>
+                  <div class="r-note">Mahasiswa ini tidak menunjukkan risiko dropout
+                  berdasarkan indikator akademik dan gaya hidup saat ini.</div>
                   <div class="gauge">
                     <div class="gauge-labels">
                       <span>0%</span><span>50%</span><span>100%</span>
@@ -559,6 +588,7 @@ if clicked:
                   </div>
                 </div>""", unsafe_allow_html=True)
 
+        # ── Contributing factors (SHAP sebagai %) ──
         with col_contrib:
             st.markdown('<div class="sl">Top 10 Contributing Factors</div>',
                         unsafe_allow_html=True)
@@ -575,72 +605,49 @@ if clicked:
                              background:var(--safe);border-radius:1px;"></span>
                 Decreases risk
               </span>
-            </div>
-            """, unsafe_allow_html=True)
+            </div>""", unsafe_allow_html=True)
 
             rows = '<div class="ctable">'
-            for _, row in contrib_df.iterrows():
+            for _, row in shap_df.iterrows():
+                # Clean up OHE feature names
                 name = (row['feature']
                         .replace('Internet_Access_', 'Internet Access = ')
                         .replace('Part_Time_Job_',   'Part-Time Job = ')
                         .replace('Scholarship_',     'Scholarship = ')
                         .replace('Semester_',        'Semester = ')
                         .replace('_', ' '))
-                v      = row['contribution']
-                bar_w  = min(row['abs'] / max_abs * 46, 46)
-                if v >= 0:
+                sv   = row['shap_value']
+                pct  = row['pct']
+                # Bar width proportional to % contribution (max 46% each side)
+                bar_w = min(pct / 100 * 92, 46)  # 92 = full width budget
+                if sv >= 0:
                     bar   = f'<div class="cbar-p" style="width:{bar_w:.1f}%;background:var(--risk);"></div>'
                     color = "var(--risk)"
-                    sign  = "+"
                 else:
                     bar   = f'<div class="cbar-n" style="width:{bar_w:.1f}%;background:var(--safe);"></div>'
                     color = "var(--safe)"
-                    sign  = ""
                 rows += f"""
                 <div class="crow">
                   <span class="cname">{name}</span>
                   <div class="cbar">{bar}<div class="cline"></div></div>
-                  <span class="cval" style="color:{color};">{sign}{v:.3f}</span>
+                  <span class="cval" style="color:{color};">{pct:.1f}%</span>
                 </div>"""
             rows += '</div>'
             st.markdown(rows, unsafe_allow_html=True)
+
             st.markdown("""
             <p style="font-size:0.65rem;color:var(--muted);margin-top:1rem;
                       font-weight:300;line-height:1.6;">
-            Each bar shows how much that feature shifted the prediction.
-            Positive = pushes toward dropout &nbsp;&middot;&nbsp;
-            Negative = pushes away from dropout.
+            Persentase menunjukkan seberapa besar kontribusi relatif tiap fitur
+            terhadap total pengaruh prediksi ini (berdasarkan SHAP values).
             </p>""", unsafe_allow_html=True)
 
         st.markdown('<div class="s3"></div>', unsafe_allow_html=True)
-
-# ── ABOUT ─────────────────────────────────────────────────────────────────────
-st.markdown('<div class="sl">About</div>', unsafe_allow_html=True)
-a1, a2, a3 = st.columns(3)
-with a1:
-    st.markdown("""<div class="ablock"><h4>Algorithm</h4>
-    <p>Logistic Regression with oversampling to handle class imbalance (~23.5% dropout rate).
-    Selected for superior Recall — critical for catching at-risk students
-    before they drop out.</p></div>""", unsafe_allow_html=True)
-with a2:
-    st.markdown("""<div class="ablock"><h4>Features Used</h4>
-    <ul>
-      <li>Study Hours per Day</li><li>Attendance Rate</li>
-      <li>Assignment Delay Days</li><li>Travel Time to Campus</li>
-      <li>Stress Index &amp; GPA</li><li>Internet Access</li>
-      <li>Part-Time Job, Scholarship</li><li>Semester / Year</li>
-    </ul></div>""", unsafe_allow_html=True)
-with a3:
-    st.markdown("""<div class="ablock"><h4>Feature Contributions</h4>
-    <p>Each prediction is explained by showing how much each feature's value
-    shifted the model's output — positive values push toward dropout,
-    negative values push toward safe. Based on logistic regression
-    coefficients × scaled feature values.</p></div>""", unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("""
 <div class="ftr">
   Student Dropout Predictor &nbsp;&middot;&nbsp;
-  Logistic Regression &nbsp;&middot;&nbsp; Streamlit
+  Logistic Regression + SHAP &nbsp;&middot;&nbsp; Streamlit
 </div>""", unsafe_allow_html=True)
