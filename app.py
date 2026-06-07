@@ -79,31 +79,28 @@ model = load_model()
 # ── CSS ────────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Inter:wght@300;400;500;600&display=swap');
 
 :root {
-    --bg:          #F9F9F9;
-    --surface:     #FFFFFF;
-    --surface-alt: #F1F1F0;
-    --text:        #1A1A1A;
-    --text-light:  #6B6B6B;
-    --border:      #E5E5E5;
-    --accent:      #2A5C4A;
-    --accent-gold: #B88B4A;
-    --risk:        #B13E3E;
-    --risk-light:  #F8EAEA;
-    --safe:        #2A5C4A;
-    --safe-light:  #EAF2EF;
-    --shadow-sm:   0 4px 12px rgba(0,0,0,0.03), 0 1px 2px rgba(0,0,0,0.05);
-    --shadow-md:   0 8px 24px rgba(0,0,0,0.05);
+    --paper:     #FDFCF8;
+    --ink:       #1A1A1A;
+    --ink-light: #5A5A5A;
+    --border:    #E8E5DC;
+    --accent:    #8B7355;
+    --accent-light: #A08B6E;
+    --risk:      #A0522D;
+    --risk-bg:   #FBF5F0;
+    --safe:      #4A6B5D;
+    --safe-bg:   #F0F5F2;
+    --shadow:    0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    background: var(--paper);
+    color: var(--ink);
     -webkit-font-smoothing: antialiased;
 }
 
@@ -114,41 +111,45 @@ html, body, [class*="css"] {
 [data-testid="stAppViewBlockContainer"],
 section.main > div.block-container {
     padding: 0 !important;
-    max-width: 100% !important;
+    max-width: 1280px !important;
+    margin: 0 auto !important;
 }
 section[data-testid="stSidebar"] { display: none !important; }
 [data-testid="stDecoration"] { display: none !important; }
 
 /* ── HEADER ── */
 .hdr {
-    background: var(--surface);
-    padding: 3.5rem clamp(2.5rem, 9vw, 8rem) 3rem;
+    padding: 4rem 2.5rem 3rem;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 2rem;
+    background: var(--paper);
 }
 .hdr-eyebrow {
+    font-family: 'Inter', sans-serif;
     font-size: 0.7rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--accent-gold);
+    color: var(--accent);
     font-weight: 500;
-    margin-bottom: 0.8rem;
+    margin-bottom: 0.75rem;
 }
 .hdr-title {
-    font-size: clamp(2.8rem, 4.5vw, 4rem);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(3rem, 5vw, 4.5rem);
     font-weight: 500;
-    letter-spacing: -0.02em;
-    line-height: 1.1;
-    color: var(--text);
+    font-style: italic;
+    line-height: 1.05;
+    color: var(--ink);
     margin-bottom: 1rem;
 }
 .hdr-sub {
+    font-family: 'Inter', sans-serif;
     font-size: 0.85rem;
-    line-height: 1.6;
-    color: var(--text-light);
+    line-height: 1.65;
+    color: var(--ink-light);
     font-weight: 400;
     max-width: 520px;
 }
@@ -156,37 +157,42 @@ section[data-testid="stSidebar"] { display: none !important; }
     display: flex;
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.6rem;
+    gap: 0.5rem;
     flex-shrink: 0;
 }
-.stat-row { display: flex; align-items: baseline; gap: 0.6rem; }
+.stat-row { display: flex; align-items: baseline; gap: 0.5rem; }
 .stat-n {
-    font-size: 1.9rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
     font-weight: 600;
     color: var(--accent);
     line-height: 1;
 }
 .stat-l {
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: var(--text-light);
-    font-weight: 400;
+    color: var(--ink-light);
+    font-weight: 500;
 }
 
 /* ── PAGE BODY ── */
 .pg {
-    padding: 3rem clamp(2.5rem, 9vw, 8rem) 5rem;
+    padding: 2.5rem 2.5rem 4rem;
+    max-width: 1280px;
+    margin: 0 auto;
 }
 
 /* ── SECTION LABEL ── */
 .sl {
+    font-family: 'Inter', sans-serif;
     font-size: 0.7rem;
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    color: var(--text-light);
-    font-weight: 500;
-    padding-bottom: 0.8rem;
+    color: var(--accent);
+    font-weight: 600;
+    padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--border);
     margin-bottom: 2rem;
 }
@@ -198,39 +204,52 @@ div[data-testid="stRadio"] > label {
     font-family: 'Inter', sans-serif !important;
     font-size: 0.7rem !important;
     font-weight: 500 !important;
-    color: var(--text-light) !important;
-    letter-spacing: 0.08em !important;
+    color: var(--ink-light) !important;
+    letter-spacing: 0.1em !important;
     text-transform: uppercase !important;
 }
 
-/* ── SLIDER track / fill / thumb ── */
+/* ── SLIDER track / fill / thumb (tanpa hover/warna nabrak) ── */
+[data-testid="stSlider"] [data-baseweb="slider"] {
+    height: 6px;
+}
 [data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child,
 [data-testid="stSlider"] div[role="progressbar"] {
     background: var(--border) !important;
+    height: 3px !important;
 }
 [data-testid="stSlider"] [data-baseweb="slider"] > div > div:nth-child(2) {
     background: var(--accent) !important;
+    height: 3px !important;
 }
 [data-testid="stSlider"] [role="slider"] {
-    background: var(--surface) !important;
+    background: var(--paper) !important;
     border: 2px solid var(--accent) !important;
     box-shadow: none !important;
     width: 14px !important;
     height: 14px !important;
     border-radius: 50% !important;
+    transition: none !important;
+}
+[data-testid="stSlider"] [role="slider"]:hover {
+    transform: scale(1.15) !important;
+    background: var(--accent) !important;
 }
 [data-testid="stSlider"] p {
-    font-size: 0.7rem !important;
-    color: var(--text-light) !important;
     font-family: 'Inter', sans-serif !important;
+    font-size: 0.7rem !important;
+    color: var(--ink-light) !important;
 }
 
 /* ── SELECTBOX ── */
 [data-baseweb="select"] > div {
     border-color: var(--border) !important;
-    border-radius: 8px !important;
-    background: var(--surface) !important;
+    border-radius: 0px !important;
+    background: var(--paper) !important;
     font-size: 0.85rem !important;
+}
+[data-baseweb="select"]:hover > div {
+    border-color: var(--accent) !important;
 }
 
 /* ── RADIO ── */
@@ -242,27 +261,33 @@ div[data-testid="stRadio"] > label {
     border-color: var(--accent) !important;
 }
 div[data-testid="stRadio"] [data-baseweb="radio"] label {
+    font-family: 'Inter', sans-serif !important;
     font-size: 0.85rem !important;
-    color: var(--text) !important;
+    color: var(--ink) !important;
     text-transform: none !important;
     letter-spacing: 0 !important;
     font-weight: 400 !important;
 }
+div[data-testid="stRadio"] {
+    display: flex;
+    gap: 1.5rem;
+}
 
 /* ── BUTTON ── */
 .stButton > button {
-    background: var(--text) !important;
-    color: var(--surface) !important;
+    background: var(--ink) !important;
+    color: var(--paper) !important;
     border: none !important;
-    border-radius: 40px !important;
+    border-radius: 0px !important;
     font-family: 'Inter', sans-serif !important;
     font-size: 0.7rem !important;
     font-weight: 500 !important;
-    letter-spacing: 0.1em !important;
+    letter-spacing: 0.15em !important;
     text-transform: uppercase !important;
-    padding: 0.8rem 2rem !important;
+    padding: 0.9rem 2rem !important;
     transition: all 0.2s ease !important;
     width: 100% !important;
+    cursor: pointer !important;
 }
 .stButton > button:hover {
     background: var(--accent) !important;
@@ -270,70 +295,78 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
 
 /* ── RESULT BOX ── */
 .rbox {
-    border-radius: 20px;
-    padding: 2rem 2rem;
-    background: var(--surface);
-    box-shadow: var(--shadow-md);
+    border-radius: 0px;
+    padding: 2rem;
+    background: var(--paper);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
 }
-.rbox.risk { border-left: 4px solid var(--risk); }
-.rbox.safe { border-left: 4px solid var(--safe); }
+.rbox.risk { background: var(--risk-bg); border-left: 3px solid var(--risk); }
+.rbox.safe { background: var(--safe-bg); border-left: 3px solid var(--safe); }
 .r-eyebrow {
+    font-family: 'Inter', sans-serif;
     font-size: 0.65rem;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    font-weight: 500;
+    font-weight: 600;
     margin-bottom: 0.75rem;
 }
 .rbox.risk .r-eyebrow { color: var(--risk); }
 .rbox.safe .r-eyebrow { color: var(--safe); }
 .r-pct {
-    font-size: 3.6rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 4rem;
     font-weight: 600;
+    font-style: italic;
     line-height: 1;
-    margin-bottom: 0.3rem;
+    margin-bottom: 0.25rem;
 }
 .rbox.risk .r-pct { color: var(--risk); }
 .rbox.safe .r-pct { color: var(--safe); }
 .r-verdict {
-    font-size: 1.1rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.25rem;
     font-weight: 500;
-    margin-bottom: 0.6rem;
+    font-style: italic;
+    margin-bottom: 0.75rem;
 }
 .rbox.risk .r-verdict { color: var(--risk); }
 .rbox.safe .r-verdict { color: var(--safe); }
 .r-note {
+    font-family: 'Inter', sans-serif;
     font-size: 0.75rem;
-    color: var(--text-light);
+    color: var(--ink-light);
     line-height: 1.6;
     font-weight: 400;
 }
 
 /* ── GAUGE ── */
-.gauge { margin-top: 2rem; }
+.gauge { margin-top: 1.8rem; }
 .gauge-labels {
     display: flex;
     justify-content: space-between;
+    font-family: 'Inter', sans-serif;
     font-size: 0.6rem;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--text-light);
-    margin-bottom: 0.6rem;
+    color: var(--ink-light);
+    margin-bottom: 0.5rem;
 }
 .gauge-track {
-    height: 4px;
+    height: 3px;
     background: var(--border);
-    border-radius: 4px;
+    border-radius: 0px;
     position: relative;
-    overflow: visible;
 }
-.gauge-fill { height: 100%; border-radius: 4px; }
+.gauge-fill { height: 100%; }
 .gauge-dot {
     position: absolute;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 12px; height: 12px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    border: 2px solid var(--surface);
+    border: 2px solid var(--paper);
     box-shadow: 0 0 0 1px currentColor;
 }
 
@@ -343,25 +376,27 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
     grid-template-columns: 140px 1fr 45px;
     align-items: center;
     gap: 1rem;
-    padding: 0.65rem 0;
+    padding: 0.7rem 0;
     border-bottom: 1px solid var(--border);
 }
 .frow:last-child { border-bottom: none; }
 .fn {
+    font-family: 'Inter', sans-serif;
     font-size: 0.75rem;
-    color: var(--text);
+    color: var(--ink);
     font-weight: 500;
 }
 .fb-bg {
-    height: 4px;
+    height: 3px;
     background: var(--border);
-    border-radius: 4px;
+    border-radius: 0px;
     overflow: hidden;
 }
-.fb-fill { height: 100%; border-radius: 4px; }
+.fb-fill { height: 100%; }
 .fp {
+    font-family: 'Inter', sans-serif;
     font-size: 0.7rem;
-    color: var(--text-light);
+    color: var(--ink-light);
     text-align: right;
     font-weight: 500;
     font-variant-numeric: tabular-nums;
@@ -370,68 +405,53 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
 /* ── REC CARD ── */
 .rcard {
     padding: 1.25rem;
-    border-radius: 16px;
-    background: var(--surface);
-    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+    background: var(--paper);
     margin-bottom: 0.8rem;
     height: calc(100% - 0.8rem);
+    transition: all 0.2s ease;
 }
-.rcard.alert { border-top: 3px solid var(--risk); }
-.rcard.ok    { border-top: 3px solid var(--safe); }
+.rcard:hover {
+    border-color: var(--accent-light);
+    box-shadow: var(--shadow);
+}
+.rcard.alert { border-left: 2px solid var(--risk); }
+.rcard.ok    { border-left: 2px solid var(--safe); }
 .rc-title {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ink);
     margin-bottom: 0.5rem;
-    letter-spacing: 0.01em;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
 }
 .rc-desc {
+    font-family: 'Inter', sans-serif;
     font-size: 0.75rem;
-    color: var(--text-light);
+    color: var(--ink-light);
     line-height: 1.65;
     font-weight: 400;
-}
-
-/* ── ABOUT ── */
-.ablock {
-    padding: 1.5rem;
-    border-radius: 16px;
-    background: var(--surface);
-    box-shadow: var(--shadow-sm);
-    height: 100%;
-}
-.ablock h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text);
-    padding-bottom: 0.75rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-}
-.ablock p, .ablock li {
-    font-size: 0.8rem;
-    color: var(--text-light);
-    line-height: 1.7;
-    font-weight: 400;
-}
-.ablock ul { padding-left: 1.2rem; }
-.ablock li { margin-bottom: 0.2rem; }
-
-/* ── FOOTER ── */
-.ftr {
-    border-top: 1px solid var(--border);
-    padding: 1.8rem clamp(2.5rem, 9vw, 8rem);
-    font-size: 0.65rem;
-    color: var(--text-light);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    background: var(--surface-alt);
 }
 
 /* spacing */
 .s1 { margin-bottom: 0.8rem; }
 .s2 { margin-bottom: 1.6rem; }
-.s3 { margin-bottom: 3rem; }
+.s3 { margin-bottom: 2.5rem; }
+
+/* ── FOOTER ── */
+.ftr {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2.5rem;
+    font-family: 'Inter', sans-serif;
+    font-size: 0.65rem;
+    color: var(--ink-light);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: var(--paper);
+    max-width: 1280px;
+    margin: 0 auto;
+}
 </style>
 
 """, unsafe_allow_html=True)
@@ -646,43 +666,6 @@ if clicked:
             </div>""", unsafe_allow_html=True)
 
     st.markdown('<div class="s3"></div>', unsafe_allow_html=True)
-
-# ── ABOUT ─────────────────────────────────────────────────────────────────────
-st.markdown('<div class="sl">About</div>', unsafe_allow_html=True)
-a1, a2, a3 = st.columns(3)
-
-with a1:
-    st.markdown("""
-    <div class="ablock">
-      <h4>Algorithm</h4>
-      <p>Logistic Regression with oversampling to handle class imbalance.
-      Selected for its superior Recall — critical for catching at-risk students
-      before they drop out.</p>
-    </div>""", unsafe_allow_html=True)
-
-with a2:
-    st.markdown("""
-    <div class="ablock">
-      <h4>Features Used</h4>
-      <ul>
-        <li>GPA &amp; Attendance Rate</li>
-        <li>Study Hours per Day</li>
-        <li>Stress Index</li>
-        <li>Assignment Delay Days</li>
-        <li>Travel Time to Campus</li>
-        <li>Internet Access</li>
-        <li>Part-Time Job, Scholarship, Semester</li>
-      </ul>
-    </div>""", unsafe_allow_html=True)
-
-with a3:
-    st.markdown("""
-    <div class="ablock">
-      <h4>Why Recall Matters</h4>
-      <p>Missing an at-risk student (False Negative) is far more costly than a false alarm.
-      This model is optimised for Recall to maximise detection of students
-      who need intervention.</p>
-    </div>""", unsafe_allow_html=True)
 
 st.markdown('</div>', unsafe_allow_html=True)
 
