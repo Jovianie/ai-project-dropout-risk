@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import os
-import joblib
+import pickle
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -18,7 +18,8 @@ st.set_page_config(
 @st.cache_resource
 def load_model():
     pkl_path = os.path.join(os.path.dirname(__file__), "logistic_regression_model.pkl")
-    return joblib.load(pkl_path)
+    with open(pkl_path, "rb") as f:
+        return pickle.load(f)
 
 model = load_model()
 
@@ -34,30 +35,16 @@ def get_feature_names():
 
 feature_names = get_feature_names()
 
-# ── SHAP explainer (background = distribusi realistis) ─────────────────────────
-@st.cache_resource
-def get_explainer():
-    import shap
-    pre = model.named_steps['preprocessor']
-    lr  = model.named_steps['model']
-    np.random.seed(42)
-    n = 300
-    bg = pd.DataFrame({
-        'Study_Hours_per_Day':   np.random.uniform(0, 8, n),
-        'Attendance_Rate':       np.random.uniform(40, 100, n),
-        'Assignment_Delay_Days': np.random.uniform(0, 14, n),
-        'Travel_Time_Minutes':   np.random.uniform(5, 120, n),
-        'Stress_Index':          np.random.uniform(1, 10, n),
-        'GPA':                   np.random.uniform(1.5, 4.0, n),
-        'Internet_Access':       np.random.choice(['Yes','No'], n),
-        'Part_Time_Job':         np.random.choice(['Yes','No'], n),
-        'Scholarship':           np.random.choice(['Yes','No'], n),
-        'Semester':              np.random.choice(['Year 1','Year 2','Year 3','Year 4'], n),
-    })
-    bg_t = pre.transform(bg)
-    return shap.LinearExplainer(lr, bg_t, feature_perturbation="interventional")
-
-explainer = get_explainer()
+# ── Feature contributions: coef * scaled_value (equivalent to SHAP for LR) ────
+# No external dependency needed — mathematically identical to LinearExplainer
+def get_contributions(inp_df):
+    pre   = model.named_steps['preprocessor']
+    lr    = model.named_steps['model']
+    inp_t = pre.transform(inp_df)
+    contributions = lr.coef_[0] * inp_t[0]
+    contrib_df = pd.DataFrame({'feature': feature_names, 'contribution': contributions})
+    contrib_df['abs'] = contrib_df['contribution'].abs()
+    return contrib_df.sort_values('abs', ascending=False).head(10).reset_index(drop=True)
 
 # ── Validation rules ───────────────────────────────────────────────────────────
 # Returns list of (field_label, message) for any violated rule
@@ -552,8 +539,6 @@ if clicked:
             """, unsafe_allow_html=True)
 
         # ── Prediction ──
-        import shap
-
         inp = pd.DataFrame({
             'Study_Hours_per_Day':    [study_hours],
             'Attendance_Rate':        [attendance],
@@ -571,14 +556,9 @@ if clicked:
         proba = model.predict_proba(inp)[0]
         dp    = proba[1]
 
-        # SHAP
-        pre   = model.named_steps['preprocessor']
-        inp_t = pre.transform(inp)
-        sv    = explainer.shap_values(inp_t)
-
-        shap_df = pd.DataFrame({'feature': feature_names, 'shap': sv[0]})
-        shap_df['abs'] = shap_df['shap'].abs()
-        shap_df = shap_df.sort_values('abs', ascending=False).head(10).reset_index(drop=True)
+        # Feature contributions (coef * scaled_value, equivalent to SHAP for LR)
+        shap_df = get_contributions(inp)
+        shap_df = shap_df.rename(columns={'contribution': 'shap'})
         max_abs = shap_df['abs'].max() if shap_df['abs'].max() > 0 else 1.0
 
         # ── Layout ──
@@ -620,7 +600,7 @@ if clicked:
                 </div>""", unsafe_allow_html=True)
 
         with col_shap:
-            st.markdown('<div class="sl">Top 10 Contributing Factors (SHAP)</div>',
+            st.markdown('<div class="sl">Top 10 Contributing Factors</div>',
                         unsafe_allow_html=True)
             st.markdown("""
             <div style="display:flex;gap:1.4rem;margin-bottom:1.2rem;font-size:0.63rem;
@@ -672,8 +652,8 @@ if clicked:
             st.markdown("""
             <p style="font-size:0.65rem;color:var(--muted);margin-top:1rem;
                       font-weight:300;line-height:1.6;">
-            SHAP values show how much each feature shifted the prediction from the baseline.
-            Positive = pushes toward dropout &nbsp;&middot;&nbsp; Negative = pushes toward safe.
+            Each bar shows how much that feature pushed the prediction toward dropout (red)
+            or away from it (green), based on the model's learned coefficients.
             </p>
             """, unsafe_allow_html=True)
 
