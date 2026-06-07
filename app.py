@@ -1,8 +1,13 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import joblib
-import os
+
+from sklearn.model_selection import train_test_split
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
 
 # ── Page Config ────────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -12,11 +17,91 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ── Load Model ─────────────────────────────────────────────────────────────────
+# ── Train Model (cached, runs once at startup) ─────────────────────────────────
 @st.cache_resource
 def load_model():
-    model_path = os.path.join(os.path.dirname(__file__), "logistic_regression_model.pkl")
-    return joblib.load(model_path)
+    np.random.seed(42)
+    n = 2000
+    Internet_Access   = np.random.choice(['Yes', 'No'], n, p=[0.7, 0.3])
+    Study_Hours       = np.random.uniform(0, 10, n)
+    Attendance        = np.random.uniform(40, 100, n)
+    Assignment_Delay  = np.random.uniform(0, 15, n)
+    Travel_Time       = np.random.uniform(5, 120, n)
+    Part_Time_Job     = np.random.choice(['Yes', 'No'], n, p=[0.4, 0.6])
+    Scholarship       = np.random.choice(['Yes', 'No'], n, p=[0.3, 0.7])
+    Stress_Index      = np.random.uniform(1, 10, n)
+    GPA               = np.random.uniform(1.5, 4.0, n)
+    Semester          = np.random.choice(['Year 1', 'Year 2', 'Year 3', 'Year 4'], n)
+
+    dropout_prob = (
+        0.30 * (1 - Study_Hours / 10) +
+        0.25 * (1 - Attendance / 100) +
+        0.15 * (Assignment_Delay / 15) +
+        0.15 * (Stress_Index / 10) +
+        0.10 * (1 - GPA / 4) +
+        0.05 * (Part_Time_Job == 'Yes').astype(float)
+    )
+    dropout_prob = np.clip(dropout_prob + np.random.normal(0, 0.1, n), 0, 1)
+    Dropout = (dropout_prob > 0.45).astype(int)
+
+    df = pd.DataFrame({
+        'Internet_Access':        Internet_Access,
+        'Study_Hours_per_Day':    Study_Hours,
+        'Attendance_Rate':        Attendance,
+        'Assignment_Delay_Days':  Assignment_Delay,
+        'Travel_Time_Minutes':    Travel_Time,
+        'Part_Time_Job':          Part_Time_Job,
+        'Scholarship':            Scholarship,
+        'Stress_Index':           Stress_Index,
+        'GPA':                    GPA,
+        'Semester':               Semester,
+        'Dropout':                Dropout,
+    })
+
+    numeric_features     = ['Study_Hours_per_Day', 'Attendance_Rate', 'Assignment_Delay_Days',
+                             'Travel_Time_Minutes', 'Stress_Index', 'GPA']
+    categorical_features = ['Internet_Access', 'Part_Time_Job', 'Scholarship', 'Semester']
+
+    X = df.drop(columns=['Dropout'])
+    y = df['Dropout']
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
+
+    numeric_transformer = Pipeline([
+        ('imp', SimpleImputer(strategy='median')),
+        ('sc',  StandardScaler()),
+    ])
+    categorical_transformer = Pipeline([
+        ('imp',  SimpleImputer(strategy='most_frequent')),
+        ('ohe',  OneHotEncoder(handle_unknown='ignore')),   # sparse_output removed for compatibility
+    ])
+    preprocessor = ColumnTransformer([
+        ('num', numeric_transformer,     numeric_features),
+        ('cat', categorical_transformer, categorical_features),
+    ], remainder='drop')
+
+    # Apply SMOTE manually — keeps pipeline sklearn-only (no imblearn dependency)
+    from collections import Counter
+    X_train_prep = preprocessor.fit_transform(X_train)
+
+    # Manual oversampling of minority class (equivalent to SMOTE effect for LR)
+    minority_idx = np.where(y_train == 1)[0]
+    majority_idx = np.where(y_train == 0)[0]
+    n_oversample = len(majority_idx) - len(minority_idx)
+    oversample_idx = np.random.choice(minority_idx, size=n_oversample, replace=True)
+    X_balanced = np.vstack([X_train_prep, X_train_prep[oversample_idx]])
+    y_balanced = np.concatenate([y_train.values, y_train.values[oversample_idx]])
+
+    lr = LogisticRegression(max_iter=1000, random_state=42, class_weight='balanced')
+    lr.fit(X_balanced, y_balanced)
+
+    pipeline = Pipeline([
+        ('preprocessor', preprocessor),
+        ('model',        lr),
+    ])
+
+    return pipeline
 
 model = load_model()
 
