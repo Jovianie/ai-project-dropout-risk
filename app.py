@@ -205,13 +205,13 @@ div[data-testid="stRadio"] > label {
     color: var(--ink-light) !important;
     letter-spacing: 0.1em !important;
     text-transform: uppercase !important;
-    margin-bottom: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
 }
 
-/* SLIDER - bersih tanpa garis aneh & hover smooth */
+/* SLIDER - bersih, min-max always visible */
 [data-testid="stSlider"] {
-    padding-top: 0.5rem !important;
-    padding-bottom: 0.5rem !important;
+    padding-top: 1.2rem !important;
+    padding-bottom: 0.25rem !important;
 }
 [data-testid="stSlider"] [data-baseweb="slider"] {
     height: 4px !important;
@@ -235,21 +235,40 @@ div[data-testid="stRadio"] > label {
     height: 14px !important;
     border-radius: 50% !important;
     transition: none !important;
+    cursor: grab !important;
+}
+[data-testid="stSlider"] [role="slider"]:active {
+    cursor: grabbing !important;
+    background: var(--accent) !important;
 }
 [data-testid="stSlider"] [role="slider"]:hover {
-    background: var(--accent) !important;
+    background: var(--accent-light) !important;
     transform: none !important;
 }
-/* Hilangkan angka/value di atas slider yang aneh */
-[data-testid="stSlider"] p {
-    display: none !important;
+/* Container untuk min/max values */
+[data-testid="stSlider"] [data-testid="stMarkdownContainer"] {
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-top: 0.5rem !important;
 }
-/* Tapi tampilkan nilai min/max di ujung */
 [data-testid="stSlider"] [data-testid="stMarkdownContainer"] p {
-    display: block !important;
     font-family: 'Inter', sans-serif !important;
-    font-size: 0.65rem !important;
+    font-size: 0.6rem !important;
     color: var(--ink-light) !important;
+    font-weight: 400 !important;
+    margin: 0 !important;
+}
+/* Angka value saat di-slide - tampil kecil di atas */
+[data-testid="stSlider"] div[data-testid="stTickBar"] ~ div p {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.6rem !important;
+    font-weight: 500 !important;
+    color: var(--accent) !important;
+    background: transparent !important;
+}
+/* Sembunyikan angka bawaan streamlit yang mengganggu */
+[data-testid="stSlider"] > div:first-child p {
+    display: none !important;
 }
 
 /* SELECTBOX */
