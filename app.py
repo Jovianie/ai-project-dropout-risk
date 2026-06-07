@@ -128,7 +128,13 @@ html, body, [class*="css"] {
 }
 
 #MainMenu, footer, header { visibility: hidden; }
-.block-container { padding: 0 !important; max-width: 100% !important; }
+.block-container,
+[data-testid="stMainBlockContainer"],
+div[data-testid="stAppViewBlockContainer"],
+section.main > div.block-container {
+    padding: 0 !important;
+    max-width: 100% !important;
+}
 section[data-testid="stSidebar"] { display: none; }
 
 /* ── HEADER ── */
@@ -211,39 +217,70 @@ section[data-testid="stSidebar"] { display: none; }
     margin-bottom: 1.6rem;
 }
 
-/* ── WIDGET OVERRIDES ── */
+/* ── WIDGET LABELS ── */
 div[data-testid="stSlider"] > label,
 div[data-testid="stSelectbox"] > label,
-div[data-testid="stRadio"] > label,
-div[data-testid="stNumberInput"] > label {
+div[data-testid="stRadio"] > label {
     font-family: 'Inter', sans-serif !important;
-    font-size: 0.78rem !important;
+    font-size: 0.72rem !important;
     font-weight: 500 !important;
     color: var(--muted) !important;
-    letter-spacing: 0.04em !important;
+    letter-spacing: 0.1em !important;
     text-transform: uppercase !important;
 }
-/* slider track */
-div[data-testid="stSlider"] [data-baseweb="slider"] > div:first-child {
+
+/* ── SLIDER: kill Streamlit red/green entirely ── */
+/* track background */
+[data-testid="stSlider"] [data-baseweb="slider"] div[role="progressbar"],
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child,
+[data-testid="stSlider"] div[class*="sliderTrack"] {
     background: var(--line) !important;
 }
-div[data-testid="stSlider"] [data-baseweb="slider"] > div:nth-child(2) {
+/* filled portion */
+[data-testid="stSlider"] [data-baseweb="slider"] div[data-testid="stSliderTrackFill"],
+[data-testid="stSlider"] [data-baseweb="slider"] > div > div:nth-child(2),
+[data-testid="stSlider"] div[class*="sliderFill"] {
     background: var(--olive) !important;
 }
-div[data-testid="stSlider"] [role="slider"] {
+/* thumb */
+[data-testid="stSlider"] [role="slider"] {
     background: var(--olive) !important;
-    border-color: var(--olive) !important;
-    width: 14px !important;
-    height: 14px !important;
+    border: 3px solid var(--cream) !important;
+    box-shadow: 0 0 0 2px var(--olive) !important;
+    width: 16px !important;
+    height: 16px !important;
+    border-radius: 50% !important;
 }
-/* selectbox */
+/* kill any inline color Streamlit injects */
+[data-testid="stSlider"] [data-baseweb="slider"] * {
+    --slider-bar-color: var(--olive) !important;
+}
+/* value label above thumb */
+[data-testid="stSlider"] div[class*="StyledThumbValue"],
+[data-testid="stSlider"] p[data-testid="stSliderTickBarMin"],
+[data-testid="stSlider"] p[data-testid="stSliderTickBarMax"] {
+    color: var(--muted) !important;
+    font-size: 0.72rem !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* ── SELECTBOX ── */
 div[data-baseweb="select"] > div {
     border-color: var(--line) !important;
     border-radius: 4px !important;
     background: #fff !important;
     font-size: 0.88rem !important;
 }
-/* radio */
+
+/* ── RADIO: olive dot, no red ── */
+div[data-testid="stRadio"] label span:first-child {
+    border-color: var(--olive) !important;
+}
+div[data-testid="stRadio"] input:checked + div,
+div[data-testid="stRadio"] label span[data-checked="true"] {
+    background: var(--olive) !important;
+    border-color: var(--olive) !important;
+}
 div[data-testid="stRadio"] [data-baseweb="radio"] label {
     font-size: 0.85rem !important;
     color: var(--ink) !important;
@@ -251,8 +288,14 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
     letter-spacing: 0 !important;
     font-weight: 400 !important;
 }
-/* remove red asterisk / required label clutter */
-.st-emotion-cache-1gulkj5 { display: none !important; }
+/* BaseWeb radio checked fill */
+[data-baseweb="radio"] [data-state="checked"] div {
+    background: var(--olive) !important;
+    border-color: var(--olive) !important;
+}
+[data-baseweb="radio"] div[class*="radioInner"] {
+    background: var(--olive) !important;
+}
 
 /* ── BUTTON ── */
 .stButton > button {
