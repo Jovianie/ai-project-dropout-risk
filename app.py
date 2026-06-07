@@ -229,13 +229,12 @@ div[data-testid="stRadio"] > label {
     color: var(--ink-light) !important;
 }
 
-/* RADIO - horizontal SEJAJAR untuk semua */
+/* RADIO - horizontal SEJAJAR SEMPURNA */
 div[data-testid="stRadio"] {
     display: flex !important;
     flex-direction: row !important;
-    gap: 1.5rem !important;
+    gap: 2rem !important;
     align-items: center !important;
-    flex-wrap: wrap !important;
 }
 div[data-testid="stRadio"] > label {
     display: inline-flex !important;
@@ -244,6 +243,7 @@ div[data-testid="stRadio"] > label {
 }
 [data-baseweb="radio"] {
     display: inline-flex !important;
+    align-items: center !important;
 }
 [data-baseweb="radio"] [data-state="checked"] div,
 [data-baseweb="radio"] div[class*="radioInner"] {
@@ -251,6 +251,15 @@ div[data-testid="stRadio"] > label {
 }
 [data-baseweb="radio"] label span:first-child {
     border-color: var(--accent) !important;
+}
+div[data-testid="stRadio"] [data-baseweb="radio"] label {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 0.85rem !important;
+    color: var(--ink) !important;
+}
+/* Hilangkan vertical stacking */
+.row-widget.stRadio {
+    flex-direction: row !important;
 }
 
 /* SELECTBOX */
