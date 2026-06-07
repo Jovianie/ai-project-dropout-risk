@@ -208,10 +208,10 @@ div[data-testid="stRadio"] > label {
     margin-bottom: 0.75rem !important;
 }
 
-/* SLIDER - bersih, min-max always visible */
+/* SLIDER - dengan min max selalu tampil */
 [data-testid="stSlider"] {
-    padding-top: 1.2rem !important;
-    padding-bottom: 0.25rem !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 1.5rem !important;
 }
 [data-testid="stSlider"] [data-baseweb="slider"] {
     height: 4px !important;
@@ -245,11 +245,12 @@ div[data-testid="stRadio"] > label {
     background: var(--accent-light) !important;
     transform: none !important;
 }
-/* Container untuk min/max values */
+/* Tampilkan min dan max values di ujung slider */
 [data-testid="stSlider"] [data-testid="stMarkdownContainer"] {
     display: flex !important;
     justify-content: space-between !important;
-    margin-top: 0.5rem !important;
+    margin-top: 0.65rem !important;
+    width: 100% !important;
 }
 [data-testid="stSlider"] [data-testid="stMarkdownContainer"] p {
     font-family: 'Inter', sans-serif !important;
@@ -258,7 +259,7 @@ div[data-testid="stRadio"] > label {
     font-weight: 400 !important;
     margin: 0 !important;
 }
-/* Angka value saat di-slide - tampil kecil di atas */
+/* Angka value saat di-slide */
 [data-testid="stSlider"] div[data-testid="stTickBar"] ~ div p {
     font-family: 'Inter', sans-serif !important;
     font-size: 0.6rem !important;
@@ -266,7 +267,7 @@ div[data-testid="stRadio"] > label {
     color: var(--accent) !important;
     background: transparent !important;
 }
-/* Sembunyikan angka bawaan streamlit yang mengganggu */
+/* Sembunyikan angka bawaan yang ganggu */
 [data-testid="stSlider"] > div:first-child p {
     display: none !important;
 }
@@ -282,12 +283,20 @@ div[data-testid="stRadio"] > label {
     border-color: var(--accent) !important;
 }
 
-/* RADIO - horizontal rapi */
+/* RADIO - horizontal dan SEJAJAR untuk semua opsi */
 div[data-testid="stRadio"] {
-    display: flex;
+    display: flex !important;
     flex-direction: row !important;
     gap: 2rem !important;
+    align-items: center !important;
     margin-top: 0.5rem !important;
+    flex-wrap: wrap !important;
+}
+div[data-testid="stRadio"] > label {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.4rem !important;
+    margin-right: 0 !important;
 }
 [data-baseweb="radio"] {
     margin-right: 0 !important;
