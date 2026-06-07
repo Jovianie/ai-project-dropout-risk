@@ -84,7 +84,7 @@ st.markdown("""
 :root {
     --paper:     #FDFCF8;
     --ink:       #1A1A1A;
-    --ink-light: #5A5A5A;
+    --ink-light: #6B6B6B;
     --border:    #E8E5DC;
     --accent:    #8B7355;
     --accent-light: #A08B6E;
@@ -92,7 +92,6 @@ st.markdown("""
     --risk-bg:   #FBF5F0;
     --safe:      #4A6B5D;
     --safe-bg:   #F0F5F2;
-    --shadow:    0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -101,10 +100,9 @@ html, body, [class*="css"] {
     font-family: 'Inter', sans-serif;
     background: var(--paper);
     color: var(--ink);
-    -webkit-font-smoothing: antialiased;
 }
 
-/* ── hide streamlit chrome ── */
+/* hide streamlit chrome */
 #MainMenu, footer, header { visibility: hidden; }
 .block-container,
 [data-testid="stMainBlockContainer"],
@@ -117,7 +115,7 @@ section.main > div.block-container {
 section[data-testid="stSidebar"] { display: none !important; }
 [data-testid="stDecoration"] { display: none !important; }
 
-/* ── HEADER ── */
+/* HEADER */
 .hdr {
     padding: 4rem 2.5rem 3rem;
     border-bottom: 1px solid var(--border);
@@ -177,14 +175,14 @@ section[data-testid="stSidebar"] { display: none !important; }
     font-weight: 500;
 }
 
-/* ── PAGE BODY ── */
+/* PAGE BODY */
 .pg {
     padding: 2.5rem 2.5rem 4rem;
     max-width: 1280px;
     margin: 0 auto;
 }
 
-/* ── SECTION LABEL ── */
+/* SECTION LABEL */
 .sl {
     font-family: 'Inter', sans-serif;
     font-size: 0.7rem;
@@ -197,7 +195,7 @@ section[data-testid="stSidebar"] { display: none !important; }
     margin-bottom: 2rem;
 }
 
-/* ── WIDGET LABELS ── */
+/* WIDGET LABELS */
 div[data-testid="stSlider"] > label,
 div[data-testid="stSelectbox"] > label,
 div[data-testid="stRadio"] > label {
@@ -207,20 +205,27 @@ div[data-testid="stRadio"] > label {
     color: var(--ink-light) !important;
     letter-spacing: 0.1em !important;
     text-transform: uppercase !important;
+    margin-bottom: 0.5rem !important;
 }
 
-/* ── SLIDER track / fill / thumb (tanpa hover/warna nabrak) ── */
+/* SLIDER - bersih tanpa garis aneh & hover smooth */
+[data-testid="stSlider"] {
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+}
 [data-testid="stSlider"] [data-baseweb="slider"] {
-    height: 6px;
+    height: 4px !important;
 }
 [data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child,
 [data-testid="stSlider"] div[role="progressbar"] {
     background: var(--border) !important;
-    height: 3px !important;
+    height: 2px !important;
+    border-radius: 0 !important;
 }
 [data-testid="stSlider"] [data-baseweb="slider"] > div > div:nth-child(2) {
     background: var(--accent) !important;
-    height: 3px !important;
+    height: 2px !important;
+    border-radius: 0 !important;
 }
 [data-testid="stSlider"] [role="slider"] {
     background: var(--paper) !important;
@@ -232,16 +237,22 @@ div[data-testid="stRadio"] > label {
     transition: none !important;
 }
 [data-testid="stSlider"] [role="slider"]:hover {
-    transform: scale(1.15) !important;
     background: var(--accent) !important;
+    transform: none !important;
 }
+/* Hilangkan angka/value di atas slider yang aneh */
 [data-testid="stSlider"] p {
+    display: none !important;
+}
+/* Tapi tampilkan nilai min/max di ujung */
+[data-testid="stSlider"] [data-testid="stMarkdownContainer"] p {
+    display: block !important;
     font-family: 'Inter', sans-serif !important;
-    font-size: 0.7rem !important;
+    font-size: 0.65rem !important;
     color: var(--ink-light) !important;
 }
 
-/* ── SELECTBOX ── */
+/* SELECTBOX */
 [data-baseweb="select"] > div {
     border-color: var(--border) !important;
     border-radius: 0px !important;
@@ -252,7 +263,16 @@ div[data-testid="stRadio"] > label {
     border-color: var(--accent) !important;
 }
 
-/* ── RADIO ── */
+/* RADIO - horizontal rapi */
+div[data-testid="stRadio"] {
+    display: flex;
+    flex-direction: row !important;
+    gap: 2rem !important;
+    margin-top: 0.5rem !important;
+}
+[data-baseweb="radio"] {
+    margin-right: 0 !important;
+}
 [data-baseweb="radio"] [data-state="checked"] div,
 [data-baseweb="radio"] div[class*="radioInner"] {
     background: var(--accent) !important;
@@ -268,12 +288,8 @@ div[data-testid="stRadio"] [data-baseweb="radio"] label {
     letter-spacing: 0 !important;
     font-weight: 400 !important;
 }
-div[data-testid="stRadio"] {
-    display: flex;
-    gap: 1.5rem;
-}
 
-/* ── BUTTON ── */
+/* BUTTON */
 .stButton > button {
     background: var(--ink) !important;
     color: var(--paper) !important;
@@ -285,7 +301,7 @@ div[data-testid="stRadio"] {
     letter-spacing: 0.15em !important;
     text-transform: uppercase !important;
     padding: 0.9rem 2rem !important;
-    transition: all 0.2s ease !important;
+    transition: background 0.2s ease !important;
     width: 100% !important;
     cursor: pointer !important;
 }
@@ -293,12 +309,11 @@ div[data-testid="stRadio"] {
     background: var(--accent) !important;
 }
 
-/* ── RESULT BOX ── */
+/* RESULT BOX */
 .rbox {
     border-radius: 0px;
     padding: 2rem;
     background: var(--paper);
-    box-shadow: var(--shadow);
     border: 1px solid var(--border);
 }
 .rbox.risk { background: var(--risk-bg); border-left: 3px solid var(--risk); }
@@ -340,7 +355,7 @@ div[data-testid="stRadio"] {
     font-weight: 400;
 }
 
-/* ── GAUGE ── */
+/* GAUGE */
 .gauge { margin-top: 1.8rem; }
 .gauge-labels {
     display: flex;
@@ -353,9 +368,8 @@ div[data-testid="stRadio"] {
     margin-bottom: 0.5rem;
 }
 .gauge-track {
-    height: 3px;
+    height: 2px;
     background: var(--border);
-    border-radius: 0px;
     position: relative;
 }
 .gauge-fill { height: 100%; }
@@ -370,7 +384,7 @@ div[data-testid="stRadio"] {
     box-shadow: 0 0 0 1px currentColor;
 }
 
-/* ── FACTOR ROWS ── */
+/* FACTOR ROWS */
 .frow {
     display: grid;
     grid-template-columns: 140px 1fr 45px;
@@ -387,9 +401,8 @@ div[data-testid="stRadio"] {
     font-weight: 500;
 }
 .fb-bg {
-    height: 3px;
+    height: 2px;
     background: var(--border);
-    border-radius: 0px;
     overflow: hidden;
 }
 .fb-fill { height: 100%; }
@@ -402,18 +415,17 @@ div[data-testid="stRadio"] {
     font-variant-numeric: tabular-nums;
 }
 
-/* ── REC CARD ── */
+/* REC CARD */
 .rcard {
     padding: 1.25rem;
     border: 1px solid var(--border);
     background: var(--paper);
     margin-bottom: 0.8rem;
     height: calc(100% - 0.8rem);
-    transition: all 0.2s ease;
+    transition: border-color 0.2s ease;
 }
 .rcard:hover {
     border-color: var(--accent-light);
-    box-shadow: var(--shadow);
 }
 .rcard.alert { border-left: 2px solid var(--risk); }
 .rcard.ok    { border-left: 2px solid var(--safe); }
@@ -439,7 +451,7 @@ div[data-testid="stRadio"] {
 .s2 { margin-bottom: 1.6rem; }
 .s3 { margin-bottom: 2.5rem; }
 
-/* ── FOOTER ── */
+/* FOOTER */
 .ftr {
     border-top: 1px solid var(--border);
     padding: 1.5rem 2.5rem;
