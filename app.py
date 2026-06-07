@@ -205,101 +205,45 @@ div[data-testid="stRadio"] > label {
     color: var(--ink-light) !important;
     letter-spacing: 0.1em !important;
     text-transform: uppercase !important;
-    margin-bottom: 0.75rem !important;
+    margin-bottom: 0.5rem !important;
 }
 
-/* SLIDER - dengan min max selalu tampil */
+/* SLIDER - simpel, min max tampil otomatis dari Streamlit */
 [data-testid="stSlider"] {
-    padding-top: 0.5rem !important;
-    padding-bottom: 1.5rem !important;
+    padding-bottom: 0.5rem !important;
 }
 [data-testid="stSlider"] [data-baseweb="slider"] {
-    height: 4px !important;
-}
-[data-testid="stSlider"] [data-baseweb="slider"] > div > div:first-child,
-[data-testid="stSlider"] div[role="progressbar"] {
-    background: var(--border) !important;
-    height: 2px !important;
-    border-radius: 0 !important;
-}
-[data-testid="stSlider"] [data-baseweb="slider"] > div > div:nth-child(2) {
-    background: var(--accent) !important;
-    height: 2px !important;
-    border-radius: 0 !important;
+    margin-top: 0.5rem !important;
 }
 [data-testid="stSlider"] [role="slider"] {
-    background: var(--paper) !important;
-    border: 2px solid var(--accent) !important;
-    box-shadow: none !important;
-    width: 14px !important;
-    height: 14px !important;
-    border-radius: 50% !important;
-    transition: none !important;
-    cursor: grab !important;
-}
-[data-testid="stSlider"] [role="slider"]:active {
-    cursor: grabbing !important;
     background: var(--accent) !important;
+    border: 2px solid var(--paper) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    width: 16px !important;
+    height: 16px !important;
 }
-[data-testid="stSlider"] [role="slider"]:hover {
-    background: var(--accent-light) !important;
-    transform: none !important;
-}
-/* Tampilkan min dan max values di ujung slider */
-[data-testid="stSlider"] [data-testid="stMarkdownContainer"] {
-    display: flex !important;
-    justify-content: space-between !important;
-    margin-top: 0.65rem !important;
-    width: 100% !important;
-}
-[data-testid="stSlider"] [data-testid="stMarkdownContainer"] p {
+/* Biarkan Streamlit handle min-max display secara default */
+[data-testid="stSlider"] p {
     font-family: 'Inter', sans-serif !important;
-    font-size: 0.6rem !important;
+    font-size: 0.65rem !important;
     color: var(--ink-light) !important;
-    font-weight: 400 !important;
-    margin: 0 !important;
-}
-/* Angka value saat di-slide */
-[data-testid="stSlider"] div[data-testid="stTickBar"] ~ div p {
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.6rem !important;
-    font-weight: 500 !important;
-    color: var(--accent) !important;
-    background: transparent !important;
-}
-/* Sembunyikan angka bawaan yang ganggu */
-[data-testid="stSlider"] > div:first-child p {
-    display: none !important;
 }
 
-/* SELECTBOX */
-[data-baseweb="select"] > div {
-    border-color: var(--border) !important;
-    border-radius: 0px !important;
-    background: var(--paper) !important;
-    font-size: 0.85rem !important;
-}
-[data-baseweb="select"]:hover > div {
-    border-color: var(--accent) !important;
-}
-
-/* RADIO - horizontal dan SEJAJAR untuk semua opsi */
+/* RADIO - horizontal SEJAJAR untuk semua */
 div[data-testid="stRadio"] {
     display: flex !important;
     flex-direction: row !important;
-    gap: 2rem !important;
+    gap: 1.5rem !important;
     align-items: center !important;
-    margin-top: 0.5rem !important;
     flex-wrap: wrap !important;
 }
 div[data-testid="stRadio"] > label {
     display: inline-flex !important;
     align-items: center !important;
     gap: 0.4rem !important;
-    margin-right: 0 !important;
 }
 [data-baseweb="radio"] {
-    margin-right: 0 !important;
+    display: inline-flex !important;
 }
 [data-baseweb="radio"] [data-state="checked"] div,
 [data-baseweb="radio"] div[class*="radioInner"] {
@@ -308,13 +252,15 @@ div[data-testid="stRadio"] > label {
 [data-baseweb="radio"] label span:first-child {
     border-color: var(--accent) !important;
 }
-div[data-testid="stRadio"] [data-baseweb="radio"] label {
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.85rem !important;
-    color: var(--ink) !important;
-    text-transform: none !important;
-    letter-spacing: 0 !important;
-    font-weight: 400 !important;
+
+/* SELECTBOX */
+[data-baseweb="select"] > div {
+    border-color: var(--border) !important;
+    border-radius: 0px !important;
+    background: var(--paper) !important;
+}
+[data-baseweb="select"]:hover > div {
+    border-color: var(--accent) !important;
 }
 
 /* BUTTON */
